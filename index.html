@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>P2P GitHub Pages Game</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mobile P2P Game</title>
     <style>
         body {
             background-color: #1a1a1a;
@@ -11,52 +11,97 @@
             font-family: Arial, sans-serif;
             text-align: center;
             margin: 0;
-            padding: 20px;
+            padding: 10px;
+            touch-action: manipulation;
         }
         #gameCanvas {
             background-color: #111;
             border: 2px solid #fff;
             display: block;
-            margin: 20px auto;
+            margin: 10px auto;
+            max-width: 100%;
+            height: auto;
         }
-        .hidden { display: none; }
+        .hidden { display: none !important; }
         input, button {
-            padding: 10px;
+            padding: 12px;
             font-size: 16px;
-            margin: 5px;
-            border-radius: 5px;
+            margin: 6px;
+            border-radius: 8px;
             border: none;
+            box-sizing: border-box;
         }
         button {
             background-color: #4CAF50;
             color: white;
             cursor: pointer;
+            touch-action: manipulation;
         }
-        button:hover { background-color: #45a049; }
-        input { background: #333; color: white; }
+        button:active { background-color: #388E3C; }
+        input { background: #333; color: white; width: 80%; max-width: 300px; }
+        
+        /* Mobile On-Screen D-Pad Styles */
+        #mobile-controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            margin-top: 10px;
+        }
+        .control-row {
+            display: flex;
+            gap: 20px;
+        }
+        .ctrl-btn {
+            width: 65px;
+            height: 55px;
+            font-size: 20px;
+            background-color: #333;
+            border: 1px solid #555;
+            color: white;
+            border-radius: 10px;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .ctrl-btn:active, .ctrl-btn.active {
+            background-color: #ff5722;
+        }
     </style>
+    <!-- PeerJS CDN -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 </head>
 <body>
 
-    <h1>P2P WebRTC Game</h1>
+    <h2>Mobile-Friendly P2P Game</h2>
 
+    <!-- Setup / Connection Screen -->
     <div id="setup-screen">
-        <h3>Step 1: Host or Join</h3>
+        <p><b>Step 1:</b> Generate ID to Host</p>
         <button id="host-btn">Create Game (Host)</button>
-        <p id="my-id-display">Generating your ID...</p>
+        <p id="my-id-display" style="word-break: break-all; padding: 0 10px; color: #aaa;">Waiting for network...</p>
         
-        <hr style="width: 50%; margin: 20px auto; border-color: #444;">
+        <hr style="width: 80%; margin: 15px auto; border-color: #444;">
         
-        <h3>Step 2: Join a Game</h3>
-        <input type="text" id="peer-id-input" placeholder="Paste Host ID here">
-        <button id="join-btn">Join Game</button>
+        <p><b>Step 2:</b> Or Join an existing game</p>
+        <input type="text" id="peer-id-input" placeholder="Paste Host ID here" autocomplete="off"><br>
+        <button id="join-btn" style="background-color: #2196F3;">Join Game</button>
+        <p id="error-msg" style="color: #ff5252; margin-top: 10px; font-size: 14px;"></p>
     </div>
 
+    <!-- Game Screen -->
     <div id="game-screen" class="hidden">
-        <h3 id="connection-status">Connecting...</h3>
-        <canvas id="gameCanvas" width="600" height="400"></canvas>
-        <p>Use <b>Arrow Keys</b> or <b>W/A/S/D</b> to move your square.</p>
+        <h4 id="connection-status" style="margin: 5px 0; color: #4CAF50;">Connecting...</h4>
+        <canvas id="gameCanvas" width="400" height="300"></canvas>
+        
+        <!-- On-Screen Touch Controls (Works on Mobile & Desktop) -->
+        <div id="mobile-controls">
+            <div><button class="ctrl-btn" id="btn-up">⬆️</button></div>
+            <div class="control-row">
+                <button class="ctrl-btn" id="btn-left">⬅️</button>
+                <button class="ctrl-btn" id="btn-down">⬇️</button>
+                <button class="ctrl-btn" id="btn-right">➡️</button>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -67,6 +112,7 @@
         const peerIdInput = document.getElementById('peer-id-input');
         const myIdDisplay = document.getElementById('my-id-display');
         const connectionStatus = document.getElementById('connection-status');
+        const errorMsg = document.getElementById('error-msg');
         
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
@@ -75,46 +121,54 @@
         let conn;
         let isHost = false;
 
-        // Game State
-        const myPos = { x: 100, y: 100, size: 30, color: '#ff5722', speed: 4 };
-        const peerPos = { x: 400, y: 200, size: 30, color: '#2196F3' };
+        // Game Entities
+        const myPos = { x: 50, y: 50, size: 25, color: '#ff5722', speed: 3.5 };
+        const peerPos = { x: 300, y: 200, size: 25, color: '#2196F3' };
         const keys = {};
 
-        // Initialize PeerJS
         function initPeer() {
-            peer = new Peer(); // Uses PeerJS free public cloud server for signaling
+            // Initialize PeerJS cleanly with explicit error catching to avoid silent fails
+            try {
+                peer = new Peer();
 
-            peer.on('open', (id) => {
-                myIdDisplay.innerText = `Your Host ID: ${id}`;
-            });
+                peer.on('open', (id) => {
+                    myIdDisplay.innerText = `Your ID: ${id}`;
+                });
 
-            // If someone connects to us (We are Host)
-            peer.on('connection', (connection) => {
-                conn = connection;
-                isHost = true;
-                setupConnectionHandlers();
-                startGameUI();
-            });
+                peer.on('error', (err) => {
+                    console.error("PeerJS Error:", err);
+                    errorMsg.innerText = `Error: ${err.type}. Check connection or refresh.`;
+                });
+
+                peer.on('connection', (connection) => {
+                    conn = connection;
+                    isHost = true;
+                    setupConnectionHandlers();
+                    startGameUI();
+                });
+            } catch (e) {
+                errorMsg.innerText = "Failed to initialize network layer.";
+            }
         }
 
         initPeer();
 
-        // Host Button Click
         hostBtn.addEventListener('click', () => {
-            if (!peer.id) {
-                alert("Peer ID not ready yet. Please wait a second.");
+            if (!peer || !peer.id) {
+                errorMsg.innerText = "Network still initializing, please wait 2 seconds.";
             } else {
-                myIdDisplay.innerText = `Waiting for connection on ID: ${peer.id}`;
+                errorMsg.innerText = "";
+                myIdDisplay.innerText = `Hosting! Give this ID to your friend: ${peer.id}`;
             }
         });
 
-        // Join Button Click (We are Client)
         joinBtn.addEventListener('click', () => {
             const remoteId = peerIdInput.value.trim();
             if (!remoteId) {
-                alert("Please enter a valid Host ID.");
+                errorMsg.innerText = "Please paste a valid Host ID first.";
                 return;
             }
+            errorMsg.innerText = "";
             isHost = false;
             conn = peer.connect(remoteId);
             setupConnectionHandlers();
@@ -123,18 +177,21 @@
 
         function setupConnectionHandlers() {
             conn.on('open', () => {
-                connectionStatus.innerText = "Connected! Game active.";
+                connectionStatus.innerText = "Connected Peer-to-Peer!";
             });
 
             conn.on('data', (data) => {
-                // Receive position data from the other player
                 peerPos.x = data.x;
                 peerPos.y = data.y;
             });
 
             conn.on('close', () => {
-                alert("The other player disconnected.");
+                alert("Connection lost with the other player.");
                 location.reload();
+            });
+
+            conn.on('error', (err) => {
+                connectionStatus.innerText = "Data channel error.";
             });
         }
 
@@ -144,12 +201,29 @@
             requestAnimationFrame(gameLoop);
         }
 
-        // Handle Keyboard Inputs
+        // Keyboard Support (Desktop)
         window.addEventListener('keydown', (e) => { keys[e.key] = true; });
         window.addEventListener('keyup', (e) => { keys[e.key] = false; });
 
+        // Touch & Mouse Button Support (Mobile)
+        const bindTouchButton = (id, keyName) => {
+            const btn = document.getElementById(id);
+            const activate = (e) => { e.preventDefault(); keys[keyName] = true; btn.classList.add('active'); };
+            const deactivate = (e) => { e.preventDefault(); keys[keyName] = false; btn.classList.remove('active'); };
+
+            btn.addEventListener('touchstart', activate, { passive: false });
+            btn.addEventListener('touchend', deactivate, { passive: false });
+            btn.addEventListener('mousedown', activate);
+            btn.addEventListener('mouseup', deactivate);
+            btn.addEventListener('mouseleave', deactivate);
+        };
+
+        bindTouchButton('btn-up', 'ArrowUp');
+        bindTouchButton('btn-down', 'ArrowDown');
+        bindTouchButton('btn-left', 'ArrowLeft');
+        bindTouchButton('btn-right', 'ArrowRight');
+
         function update() {
-            // Movement logic
             if (keys['ArrowUp'] || keys['w'] || keys['W']) myPos.y -= myPos.speed;
             if (keys['ArrowDown'] || keys['s'] || keys['S']) myPos.y += myPos.speed;
             if (keys['ArrowLeft'] || keys['a'] || keys['A']) myPos.x -= myPos.speed;
@@ -159,7 +233,7 @@
             myPos.x = Math.max(0, Math.min(canvas.width - myPos.size, myPos.x));
             myPos.y = Math.max(0, Math.min(canvas.height - myPos.size, myPos.y));
 
-            // Send position to peer if connected
+            // Transmit position directly to peer browser
             if (conn && conn.open) {
                 conn.send({ x: myPos.x, y: myPos.y });
             }
