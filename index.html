@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PeerJS Connection Tester</title>
+
+    <!-- Include PeerJS from CDN -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: system-ui, sans-serif;
+        }
+
+        body {
+            max-width: 700px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+            background: #f5f7fa;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        h1 {
+            margin-top: 0;
+            font-size: 1.6rem;
+            color: #1e293b;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin: 0.75rem 0 0.25rem;
+        }
+
+        input, button {
+            font-size: 1rem;
+            padding: 0.5rem 0.75rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+
+        button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        button:hover {
+            background: #1d4ed8;
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .status {
+            background: #f1f5f9;
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-family: monospace;
+            margin: 0.5rem 0;
+            word-break: break-all;
+        }
+
+        .messages {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 0.75rem;
+            height: 150px;
+            overflow-y: auto;
+            margin: 0.5rem 0;
+        }
+
+        .messages div {
+            padding: 0.15rem 0;
+            border-bottom: 1px solid #e9edf2;
+        }
+
+        .row {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .row input {
+            flex: 1;
+        }
+
+        .row button {
+            width: auto;
+            padding: 0.5rem 1.5rem;
+        }
+
+        .peer-id-box {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: #eef2f6;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+        }
+
+        .peer-id-box span {
+            font-family: monospace;
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #0b2b4a;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🧪 PeerJS Connection Tester</h1>
+
+    <!-- Peer initialisation -->
+    <div class="card">
+        <h2>Your Peer</h2>
+        <label for="peerIdInput">Peer ID (leave empty for auto‑generate)</label>
+        <div class="row">
+            <input type="text" id="peerIdInput" placeholder="e.g. my-peer-123" />
+            <button id="initPeerBtn">Initialise</button>
+        </div>
+        <div id="peerStatus" class="status">⏳ Not initialised</div>
+        <div class="peer-id-box">
+            <strong>Your ID:</strong>
+            <span id="displayPeerId">—</span>
+        </div>
+    </div>
+
+    <!-- Connect to another peer -->
+    <div class="card">
+        <h2>Connect to a Peer</h2>
+        <label for="remoteIdInput">Remote Peer ID</label>
+        <div class="row">
+            <input type="text" id="remoteIdInput" placeholder="Enter remote peer ID" />
+            <button id="connectBtn" disabled>Connect</button>
+        </div>
+        <div id="connectionStatus" class="status">🔌 Not connected</div>
+    </div>
+
+    <!-- Chat / data exchange -->
+    <div class="card">
+        <h2>💬 Chat</h2>
+        <div id="chatMessages" class="messages">
+            <div style="color: #64748b;">Messages will appear here...</div>
+        </div>
+        <div class="row">
+            <input type="text" id="messageInput" placeholder="Type a message..." disabled />
+            <button id="sendBtn" disabled>Send</button>
+        </div>
+    </div>
+
+    <script>
+        // ------------------------------------------------------------------
+        // GLOBALS
+        // ------------------------------------------------------------------
+        let peer = null;            // The Peer instance
+        let connection = null;     // The active DataConnection
+        let myPeerId = null;
+
+        // DOM elements
+        const peerIdInput = document.getElementById('peerIdInput');
+        const initPeerBtn = document.getElementById('initPeerBtn');
+        const peerStatus = document.getElementById('peerStatus');
+        const displayPeerId = document.getElementById('displayPeerId');
+
+        const remoteIdInput = document.getElementById('remoteIdInput');
+        const connectBtn = document.getElementById('connectBtn');
+        const connectionStatus = document.getElementById('connectionStatus');
+
+        const chatMessages = document.getElementById('chatMessages');
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
+
+        // ------------------------------------------------------------------
+        // HELPER FUNCTIONS
+        // ------------------------------------------------------------------
+        function appendMessage(text, sender = 'system') {
+            const div = document.createElement('div');
+            const prefix = sender === 'me' ? '🧑 You' :
+                           sender === 'peer' ? '👤 Peer' : '⚙️ System';
+            div.textContent = `[${prefix}] ${text}`;
+            if (sender === 'system') div.style.color = '#64748b';
+            chatMessages.appendChild(div);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function updatePeerStatus(text, isOk = false) {
+            peerStatus.textContent = text;
+            peerStatus.style.background = isOk ? '#dcfce7' : '#f1f5f9';
+        }
+
+        function updateConnectionStatus(text, isConnected = false) {
+            connectionStatus.textContent = text;
+            connectionStatus.style.background = isConnected ? '#dcfce7' : '#f1f5f9';
+        }
+
+        function setControlsEnabled(enabled) {
+            connectBtn.disabled = !enabled;
+            messageInput.disabled = !enabled;
+            sendBtn.disabled = !enabled;
+            if (enabled && connection && connection.open) {
+                // If we're already connected, enable chat
+                messageInput.disabled = false;
+                sendBtn.disabled = false;
+            } else {
+                // Only enable chat if we have an open connection
+                if (enabled && connection && connection.open) {
+                    messageInput.disabled = false;
+                    sendBtn.disabled = false;
+                } else {
+                    messageInput.disabled = true;
+                    sendBtn.disabled = true;
+                }
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // INITIALISE PEER
+        // ------------------------------------------------------------------
+        function initPeer() {
+            const id = peerIdInput.value.trim() || undefined; // undefined => auto
+
+            // Close existing peer if any
+            if (peer) {
+                peer.destroy();
+                peer = null;
+                connection = null;
+                myPeerId = null;
+                displayPeerId.textContent = '—';
+                updatePeerStatus('⏳ Destroyed old peer');
+                updateConnectionStatus('🔌 Not connected');
+                chatMessages.innerHTML = '<div style="color: #64748b;">Messages will appear here...</div>';
+                setControlsEnabled(false);
+            }
+
+            updatePeerStatus('⏳ Initialising...');
+
+            // Create a new Peer. Using the default cloud server (no config).
+            peer = new Peer(id, {
+                // Optionally you can specify your own signalling server:
+                // host: 'your-server.com', port: 443, path: '/peerjs'
+                debug: 2  // 0 = none, 1 = errors, 2 = all
+            });
+
+            peer.on('open', (assignedId) => {
+                myPeerId = assignedId;
+                displayPeerId.textContent = myPeerId;
+                updatePeerStatus(`✅ Peer ready (ID: ${myPeerId})`, true);
+                setControlsEnabled(true);
+                appendMessage(`Your Peer ID is ${myPeerId}`, 'system');
+            });
+
+            peer.on('error', (err) => {
+                console.error('Peer error:', err);
+                updatePeerStatus(`❌ Error: ${err.message}`, false);
+                appendMessage(`Error: ${err.message}`, 'system');
+                // Try to recover by re-initialising? For simplicity, we just disable.
+                setControlsEnabled(false);
+            });
+
+            peer.on('disconnected', () => {
+                updatePeerStatus('⚠️ Disconnected from signalling server – attempting reconnect...', false);
+                // PeerJS auto-reconnects, but we can show a warning.
+                appendMessage('Disconnected from signalling server. Reconnecting...', 'system');
+                setControlsEnabled(false);
+            });
+
+            peer.on('close', () => {
+                updatePeerStatus('🔒 Peer destroyed', false);
+                displayPeerId.textContent = '—';
+                appendMessage('Peer closed.', 'system');
+                setControlsEnabled(false);
+                connection = null;
+                updateConnectionStatus('🔌 Not connected');
+            });
+
+            // --- Incoming connections ---
+            peer.on('connection', (incomingConn) => {
+                // If we already have a connection, close the new one (or handle multiple)
+                if (connection && connection.open) {
+                    appendMessage('⚠️ Incoming connection ignored – already connected.', 'system');
+                    incomingConn.close();
+                    return;
+                }
+
+                connection = incomingConn;
+                setupConnectionListeners(connection);
+                appendMessage(`📞 Incoming connection from ${connection.peer}`, 'system');
+                updateConnectionStatus(`✅ Connected to ${connection.peer}`, true);
+                setControlsEnabled(true);
+            });
+        }
+
+        // ------------------------------------------------------------------
+        // CONNECTION LISTENERS (shared for outgoing and incoming)
+        // ------------------------------------------------------------------
+        function setupConnectionListeners(conn) {
+            conn.on('open', () => {
+                appendMessage(`🔗 Connection open with ${conn.peer}`, 'system');
+                updateConnectionStatus(`✅ Connected to ${conn.peer}`, true);
+                setControlsEnabled(true);
+                // The 'open' event fires once the data connection is ready.
+                // For outgoing connections, we already called conn.open().
+            });
+
+            conn.on('data', (data) => {
+                appendMessage(data, 'peer');
+            });
+
+            conn.on('close', () => {
+                appendMessage(`❌ Connection with ${conn.peer} closed`, 'system');
+                updateConnectionStatus('🔌 Not connected', false);
+                connection = null;
+                setControlsEnabled(false);
+                chatMessages.innerHTML = '<div style="color: #64748b;">Connection closed.</div>';
+            });
+
+            conn.on('error', (err) => {
+                appendMessage(`Connection error: ${err.message}`, 'system');
+                console.error('Connection error:', err);
+            });
+        }
+
+        // ------------------------------------------------------------------
+        // OUTGOING CONNECTION
+        // ------------------------------------------------------------------
+        function connectToPeer() {
+            const remoteId = remoteIdInput.value.trim();
+            if (!remoteId) {
+                appendMessage('Please enter a remote Peer ID.', 'system');
+                return;
+            }
+            if (!peer || !peer.id) {
+                appendMessage('Your peer is not initialised. Click "Initialise" first.', 'system');
+                return;
+            }
+            if (remoteId === peer.id) {
+                appendMessage('You cannot connect to yourself!', 'system');
+                return;
+            }
+            if (connection && connection.open) {
+                appendMessage('Already connected. Close the existing connection first.', 'system');
+                return;
+            }
+
+            appendMessage(`🔗 Attempting to connect to ${remoteId}...`, 'system');
+            const conn = peer.connect(remoteId, {
+                reliable: true
+            });
+
+            // The connection object is returned immediately; we must attach listeners.
+            connection = conn;
+            setupConnectionListeners(conn);
+
+            // If the connection doesn't open within a reasonable time, we could handle timeout.
+            // But PeerJS will emit 'error' if it fails.
+
+            // Update UI optimistically
+            updateConnectionStatus(`⏳ Connecting to ${remoteId}...`, false);
+            setControlsEnabled(false); // disable until open
+            conn.on('open', () => {
+                // This is also handled in setupConnectionListeners, but we re-enable here.
+                setControlsEnabled(true);
+            });
+        }
+
+        // ------------------------------------------------------------------
+        // SEND MESSAGE
+        // ------------------------------------------------------------------
+        function sendMessage() {
+            const text = messageInput.value.trim();
+            if (!text) return;
+            if (!connection || !connection.open) {
+                appendMessage('No open connection to send message.', 'system');
+                return;
+            }
+            connection.send(text);
+            appendMessage(text, 'me');
+            messageInput.value = '';
+        }
+
+        // ------------------------------------------------------------------
+        // EVENT BINDINGS
+        // ------------------------------------------------------------------
+        initPeerBtn.addEventListener('click', initPeer);
+        connectBtn.addEventListener('click', connectToPeer);
+        sendBtn.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        // Auto-initialise on page load with auto-generated ID
+        window.addEventListener('load', () => {
+            // Optionally auto-init:
+            // initPeer();
+            // Or leave it for the user to click.
+            appendMessage('👋 Click "Initialise" to start.', 'system');
+        });
+
+        // If the user presses Enter in remote ID field, trigger connect
+        remoteIdInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') connectBtn.click();
+        });
+    </script>
+
+</body>
+</html>
