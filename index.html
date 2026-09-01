@@ -1,26 +1,20 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PeerJS Connection Tester</title>
-
-    <!-- Include PeerJS from CDN -->
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-
+    <title>Trystero P2P 聊天室测试</title>
     <style>
         * {
             box-sizing: border-box;
-            font-family: system-ui, sans-serif;
+            font-family: system-ui, -apple-system, sans-serif;
         }
-
         body {
             max-width: 700px;
             margin: 2rem auto;
             padding: 0 1rem;
-            background: #f5f7fa;
+            background: #f1f5f9;
         }
-
         .card {
             background: white;
             border-radius: 12px;
@@ -28,53 +22,63 @@
             padding: 1.5rem;
             margin-bottom: 1.5rem;
         }
-
         h1 {
-            margin-top: 0;
+            margin: 0 0 0.25rem;
             font-size: 1.6rem;
-            color: #1e293b;
+            color: #0f172a;
         }
-
-        label {
-            display: block;
-            font-weight: 600;
-            margin: 0.75rem 0 0.25rem;
+        .subtitle {
+            color: #475569;
+            margin: 0 0 1rem;
+            font-size: 0.95rem;
         }
-
-        input, button {
-            font-size: 1rem;
-            padding: 0.5rem 0.75rem;
-            border: 1px solid #cbd5e1;
+        .status-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem 1.5rem;
+            background: #f8fafc;
+            padding: 0.6rem 1rem;
             border-radius: 8px;
-            width: 100%;
-            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            border: 1px solid #e2e8f0;
+        }
+        .status-bar span {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+        .status-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 4px;
+        }
+        .status-dot.online { background: #22c55e; }
+        .status-dot.offline { background: #94a3b8; }
+        .status-dot.connecting { background: #eab308; animation: pulse 1s infinite; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
         }
 
-        button {
-            background: #2563eb;
-            color: white;
-            border: none;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.15s;
+        .peer-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            margin: 0.5rem 0 0;
         }
-
-        button:hover {
-            background: #1d4ed8;
-        }
-
-        button:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        .status {
-            background: #f1f5f9;
-            padding: 0.75rem;
-            border-radius: 8px;
+        .peer-tag {
+            background: #dbeafe;
+            color: #1e40af;
+            padding: 0.2rem 0.7rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
             font-family: monospace;
-            margin: 0.5rem 0;
-            word-break: break-all;
+        }
+        .peer-tag.self {
+            background: #dcfce7;
+            color: #166534;
         }
 
         .messages {
@@ -82,342 +86,403 @@
             border: 1px solid #e2e8f0;
             border-radius: 8px;
             padding: 0.75rem;
-            height: 150px;
+            height: 200px;
             overflow-y: auto;
             margin: 0.5rem 0;
+            font-size: 0.95rem;
         }
-
-        .messages div {
+        .messages .msg {
+            padding: 0.2rem 0;
+            border-bottom: 1px solid #f1f5f9;
+            word-break: break-word;
+        }
+        .messages .msg .meta {
+            color: #64748b;
+            font-size: 0.8rem;
+            margin-right: 0.4rem;
+        }
+        .messages .msg .meta.me { color: #2563eb; }
+        .messages .msg .meta.other { color: #7c3aed; }
+        .messages .system {
+            color: #64748b;
+            font-style: italic;
+            font-size: 0.85rem;
             padding: 0.15rem 0;
-            border-bottom: 1px solid #e9edf2;
         }
 
         .row {
             display: flex;
             gap: 0.5rem;
         }
-
         .row input {
             flex: 1;
-        }
-
-        .row button {
-            width: auto;
-            padding: 0.5rem 1.5rem;
-        }
-
-        .peer-id-box {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            background: #eef2f6;
-            padding: 0.5rem 1rem;
+            padding: 0.5rem 0.75rem;
+            border: 1px solid #cbd5e1;
             border-radius: 8px;
+            font-size: 1rem;
         }
+        .row input:disabled {
+            background: #f1f5f9;
+            cursor: not-allowed;
+        }
+        button {
+            padding: 0.5rem 1.5rem;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.15s;
+            white-space: nowrap;
+        }
+        button:hover:not(:disabled) { background: #1d4ed8; }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        button.secondary {
+            background: #e2e8f0;
+            color: #1e293b;
+        }
+        button.secondary:hover:not(:disabled) { background: #cbd5e1; }
 
-        .peer-id-box span {
-            font-family: monospace;
-            font-size: 1.1rem;
-            font-weight: bold;
-            color: #0b2b4a;
+        .config-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+        .config-row label {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #334155;
+        }
+        .config-row select, .config-row input[type="text"] {
+            padding: 0.3rem 0.6rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            background: white;
+        }
+        .config-row input[type="text"] {
+            flex: 1;
+            min-width: 120px;
+        }
+        .hint {
+            font-size: 0.8rem;
+            color: #64748b;
+            margin-top: 0.3rem;
         }
     </style>
 </head>
 <body>
 
-    <h1>🧪 PeerJS Connection Tester</h1>
+    <h1>🧪 Trystero P2P 测试</h1>
+    <p class="subtitle">基于 Trystero 的 WebRTC 直连聊天室 · 无需服务器</p>
 
-    <!-- Peer initialisation -->
     <div class="card">
-        <h2>Your Peer</h2>
-        <label for="peerIdInput">Peer ID (leave empty for auto‑generate)</label>
-        <div class="row">
-            <input type="text" id="peerIdInput" placeholder="e.g. my-peer-123" />
-            <button id="initPeerBtn">Initialise</button>
+        <div class="config-row">
+            <label for="strategySelect">信令策略</label>
+            <select id="strategySelect">
+                <option value="nostr">Nostr (默认)</option>
+                <option value="torrent">BitTorrent</option>
+                <option value="mqtt">MQTT</option>
+                <option value="ipfs">IPFS</option>
+            </select>
+            <label for="roomInput">房间名</label>
+            <input type="text" id="roomInput" value="trystero-test-room" />
+            <button id="connectBtn">🔄 加入房间</button>
         </div>
-        <div id="peerStatus" class="status">⏳ Not initialised</div>
-        <div class="peer-id-box">
-            <strong>Your ID:</strong>
-            <span id="displayPeerId">—</span>
+
+        <div class="status-bar">
+            <span>
+                <span class="status-dot offline" id="statusDot"></span>
+                <span id="statusText">未连接</span>
+            </span>
+            <span>🆔 我的ID: <strong id="myIdDisplay">—</strong></span>
+            <span>👥 在线: <strong id="peerCount">0</strong></span>
+        </div>
+
+        <div>
+            <div style="font-weight:600; font-size:0.9rem; color:#334155; margin-top:0.5rem;">房间内的其他成员</div>
+            <div class="peer-list" id="peerList">
+                <span style="color:#94a3b8; font-size:0.85rem;">暂无</span>
+            </div>
         </div>
     </div>
 
-    <!-- Connect to another peer -->
     <div class="card">
-        <h2>Connect to a Peer</h2>
-        <label for="remoteIdInput">Remote Peer ID</label>
-        <div class="row">
-            <input type="text" id="remoteIdInput" placeholder="Enter remote peer ID" />
-            <button id="connectBtn" disabled>Connect</button>
-        </div>
-        <div id="connectionStatus" class="status">🔌 Not connected</div>
-    </div>
-
-    <!-- Chat / data exchange -->
-    <div class="card">
-        <h2>💬 Chat</h2>
-        <div id="chatMessages" class="messages">
-            <div style="color: #64748b;">Messages will appear here...</div>
+        <div class="messages" id="messageContainer">
+            <div class="system">💡 点击「加入房间」开始测试</div>
         </div>
         <div class="row">
-            <input type="text" id="messageInput" placeholder="Type a message..." disabled />
-            <button id="sendBtn" disabled>Send</button>
+            <input type="text" id="messageInput" placeholder="输入消息..." disabled />
+            <button id="sendBtn" disabled>发送</button>
         </div>
     </div>
 
-    <script>
-        // ------------------------------------------------------------------
-        // GLOBALS
-        // ------------------------------------------------------------------
-        let peer = null;            // The Peer instance
-        let connection = null;     // The active DataConnection
-        let myPeerId = null;
+    <script type="importmap">
+        {
+            "imports": {
+                "trystero": "https://esm.run/trystero@0.25.3",
+                "trystero/torrent": "https://esm.run/trystero@0.25.3/torrent",
+                "trystero/mqtt": "https://esm.run/trystero@0.25.3/mqtt",
+                "trystero/ipfs": "https://esm.run/trystero@0.25.3/ipfs"
+            }
+        }
+    </script>
 
-        // DOM elements
-        const peerIdInput = document.getElementById('peerIdInput');
-        const initPeerBtn = document.getElementById('initPeerBtn');
-        const peerStatus = document.getElementById('peerStatus');
-        const displayPeerId = document.getElementById('displayPeerId');
-
-        const remoteIdInput = document.getElementById('remoteIdInput');
+    <script type="module">
+        // -------- 导入 Trystero --------
+        // 根据选择的策略动态导入
+        // -------- DOM 引用 --------
+        const strategySelect = document.getElementById('strategySelect');
+        const roomInput = document.getElementById('roomInput');
         const connectBtn = document.getElementById('connectBtn');
-        const connectionStatus = document.getElementById('connectionStatus');
-
-        const chatMessages = document.getElementById('chatMessages');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const myIdDisplay = document.getElementById('myIdDisplay');
+        const peerCount = document.getElementById('peerCount');
+        const peerList = document.getElementById('peerList');
+        const messageContainer = document.getElementById('messageContainer');
         const messageInput = document.getElementById('messageInput');
         const sendBtn = document.getElementById('sendBtn');
 
-        // ------------------------------------------------------------------
-        // HELPER FUNCTIONS
-        // ------------------------------------------------------------------
-        function appendMessage(text, sender = 'system') {
+        // -------- 状态 --------
+        let room = null;
+        let sendMessage = null;
+        let myPeerId = null;
+        let peerIds = new Set();
+
+        // -------- 辅助函数 --------
+        function setStatus(state, text) {
+            statusDot.className = 'status-dot ' + state;
+            statusText.textContent = text;
+        }
+
+        function addSystemMessage(text) {
             const div = document.createElement('div');
-            const prefix = sender === 'me' ? '🧑 You' :
-                           sender === 'peer' ? '👤 Peer' : '⚙️ System';
-            div.textContent = `[${prefix}] ${text}`;
-            if (sender === 'system') div.style.color = '#64748b';
-            chatMessages.appendChild(div);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+            div.className = 'system';
+            div.textContent = '⚙️ ' + text;
+            messageContainer.appendChild(div);
+            messageContainer.scrollTop = messageContainer.scrollHeight;
         }
 
-        function updatePeerStatus(text, isOk = false) {
-            peerStatus.textContent = text;
-            peerStatus.style.background = isOk ? '#dcfce7' : '#f1f5f9';
+        function addChatMessage(peerId, text, isMe = false) {
+            const div = document.createElement('div');
+            div.className = 'msg';
+            const meta = document.createElement('span');
+            meta.className = 'meta' + (isMe ? ' me' : ' other');
+            meta.textContent = isMe ? '🧑 我' : `👤 ${peerId.slice(0, 8)}`;
+            div.appendChild(meta);
+            div.appendChild(document.createTextNode(text));
+            messageContainer.appendChild(div);
+            messageContainer.scrollTop = messageContainer.scrollHeight;
         }
 
-        function updateConnectionStatus(text, isConnected = false) {
-            connectionStatus.textContent = text;
-            connectionStatus.style.background = isConnected ? '#dcfce7' : '#f1f5f9';
+        function updatePeerList() {
+            const allPeers = Array.from(peerIds);
+            peerCount.textContent = allPeers.length;
+            if (allPeers.length === 0) {
+                peerList.innerHTML = '<span style="color:#94a3b8; font-size:0.85rem;">暂无其他成员</span>';
+                return;
+            }
+            peerList.innerHTML = allPeers.map(id =>
+                `<span class="peer-tag">${id === myPeerId ? '⭐ ' : ''}${id}</span>`
+            ).join('');
         }
 
-        function setControlsEnabled(enabled) {
-            connectBtn.disabled = !enabled;
-            messageInput.disabled = !enabled;
-            sendBtn.disabled = !enabled;
-            if (enabled && connection && connection.open) {
-                // If we're already connected, enable chat
+        // -------- 核心：加入房间 --------
+        async function joinRoom() {
+            const strategy = strategySelect.value;
+            const roomId = roomInput.value.trim() || 'default-room';
+
+            // 断开旧连接
+            if (room) {
+                // Trystero 没有显式的 leave 方法，但我们可以清理引用
+                room = null;
+                sendMessage = null;
+                peerIds.clear();
+                updatePeerList();
+                addSystemMessage('已离开旧房间');
+            }
+
+            setStatus('connecting', '正在连接...');
+            connectBtn.disabled = true;
+            messageInput.disabled = true;
+            sendBtn.disabled = true;
+
+            try {
+                // 动态导入对应的策略
+                let joinRoomFn;
+                switch (strategy) {
+                    case 'torrent':
+                        const torrentModule = await import('trystero/torrent');
+                        joinRoomFn = torrentModule.joinRoom;
+                        break;
+                    case 'mqtt':
+                        const mqttModule = await import('trystero/mqtt');
+                        joinRoomFn = mqttModule.joinRoom;
+                        break;
+                    case 'ipfs':
+                        const ipfsModule = await import('trystero/ipfs');
+                        joinRoomFn = ipfsModule.joinRoom;
+                        break;
+                    default: // nostr
+                        const nostrModule = await import('trystero');
+                        joinRoomFn = nostrModule.joinRoom;
+                        break;
+                }
+
+                // 配置：appId 必须唯一标识你的应用
+                const config = {
+                    appId: 'my-trystero-chat-app-v1'
+                };
+
+                // 加入房间
+                room = joinRoomFn(config, roomId);
+
+                // -------- 监听房间事件 --------
+                room.onPeerJoin((peerId) => {
+                    if (peerId !== myPeerId) {
+                        peerIds.add(peerId);
+                        updatePeerList();
+                        addSystemMessage(`👋 ${peerId} 加入了房间`);
+                    }
+                });
+
+                room.onPeerLeave((peerId) => {
+                    if (peerIds.has(peerId)) {
+                        peerIds.delete(peerId);
+                        updatePeerList();
+                        addSystemMessage(`👋 ${peerId} 离开了房间`);
+                    }
+                });
+
+                // 获取自己的 ID（Trystero 通过 onPeerJoin 回调会收到自己的 ID）
+                // 但我们需要在连接后获取，这里用一个 Promise 来等待
+                const selfIdPromise = new Promise((resolve) => {
+                    const handler = (peerId) => {
+                        if (!myPeerId) {
+                            myPeerId = peerId;
+                            myIdDisplay.textContent = myPeerId;
+                            resolve(peerId);
+                        }
+                    };
+                    // 如果已经触发了，直接 resolve
+                    if (myPeerId) {
+                        resolve(myPeerId);
+                        return;
+                    }
+                    // 否则监听
+                    room.onPeerJoin(handler);
+                    // 但 onPeerJoin 对自身只会触发一次，如果已经错过了，我们需要另一种方式
+                    // Trystero 在 joinRoom 后可以通过 room.id 获取？实际上没有直接暴露
+                    // 这里用一个小技巧：如果 2 秒后还没获取到，就假设已经获取了
+                    setTimeout(() => {
+                        if (!myPeerId) {
+                            // 尝试从 peerIds 中获取第一个？但可能还没有其他 peer
+                            // 这种情况下我们生成一个临时 ID 显示
+                            myPeerId = 'loading...';
+                            myIdDisplay.textContent = myPeerId;
+                            resolve(null);
+                        }
+                    }, 2000);
+                });
+
+                // -------- 创建消息通道 (Action) --------
+                const [send, receive] = room.makeAction('chat');
+                sendMessage = send;
+
+                // 接收消息
+                receive((data, peerId) => {
+                    if (peerId === myPeerId) return; // 忽略自己发出的（但通常不会收到自己的）
+                    addChatMessage(peerId, data.text, false);
+                });
+
+                // 等待获取自己的 ID
+                await selfIdPromise;
+
+                // 如果还没有 myPeerId（可能超时），再次尝试从 room 获取
+                // 实际上我们可以通过 onPeerJoin 来获取，但如果超时了，就显示为 unknown
+                if (!myPeerId || myPeerId === 'loading...') {
+                    myPeerId = 'unknown-' + Math.random().toString(36).slice(2, 6);
+                    myIdDisplay.textContent = myPeerId;
+                }
+
+                // 把自己加入列表
+                peerIds.add(myPeerId);
+                updatePeerList();
+
+                setStatus('online', '已连接');
+                connectBtn.disabled = false;
                 messageInput.disabled = false;
                 sendBtn.disabled = false;
-            } else {
-                // Only enable chat if we have an open connection
-                if (enabled && connection && connection.open) {
-                    messageInput.disabled = false;
-                    sendBtn.disabled = false;
-                } else {
-                    messageInput.disabled = true;
-                    sendBtn.disabled = true;
-                }
+                addSystemMessage(`✅ 已加入房间 "${roomId}" (策略: ${strategy})`);
+
+                // 广播一条系统消息（通过聊天通道）
+                // 但这里不发送，因为刚加入时其他 peer 可能还没准备好
+
+            } catch (err) {
+                console.error('Trystero 连接失败:', err);
+                setStatus('offline', '连接失败');
+                connectBtn.disabled = false;
+                addSystemMessage(`❌ 连接失败: ${err.message}`);
             }
         }
 
-        // ------------------------------------------------------------------
-        // INITIALISE PEER
-        // ------------------------------------------------------------------
-        function initPeer() {
-            const id = peerIdInput.value.trim() || undefined; // undefined => auto
-
-            // Close existing peer if any
-            if (peer) {
-                peer.destroy();
-                peer = null;
-                connection = null;
-                myPeerId = null;
-                displayPeerId.textContent = '—';
-                updatePeerStatus('⏳ Destroyed old peer');
-                updateConnectionStatus('🔌 Not connected');
-                chatMessages.innerHTML = '<div style="color: #64748b;">Messages will appear here...</div>';
-                setControlsEnabled(false);
-            }
-
-            updatePeerStatus('⏳ Initialising...');
-
-            // Create a new Peer. Using the default cloud server (no config).
-            peer = new Peer(id, {
-                // Optionally you can specify your own signalling server:
-                // host: 'your-server.com', port: 443, path: '/peerjs'
-                debug: 2  // 0 = none, 1 = errors, 2 = all
-            });
-
-            peer.on('open', (assignedId) => {
-                myPeerId = assignedId;
-                displayPeerId.textContent = myPeerId;
-                updatePeerStatus(`✅ Peer ready (ID: ${myPeerId})`, true);
-                setControlsEnabled(true);
-                appendMessage(`Your Peer ID is ${myPeerId}`, 'system');
-            });
-
-            peer.on('error', (err) => {
-                console.error('Peer error:', err);
-                updatePeerStatus(`❌ Error: ${err.message}`, false);
-                appendMessage(`Error: ${err.message}`, 'system');
-                // Try to recover by re-initialising? For simplicity, we just disable.
-                setControlsEnabled(false);
-            });
-
-            peer.on('disconnected', () => {
-                updatePeerStatus('⚠️ Disconnected from signalling server – attempting reconnect...', false);
-                // PeerJS auto-reconnects, but we can show a warning.
-                appendMessage('Disconnected from signalling server. Reconnecting...', 'system');
-                setControlsEnabled(false);
-            });
-
-            peer.on('close', () => {
-                updatePeerStatus('🔒 Peer destroyed', false);
-                displayPeerId.textContent = '—';
-                appendMessage('Peer closed.', 'system');
-                setControlsEnabled(false);
-                connection = null;
-                updateConnectionStatus('🔌 Not connected');
-            });
-
-            // --- Incoming connections ---
-            peer.on('connection', (incomingConn) => {
-                // If we already have a connection, close the new one (or handle multiple)
-                if (connection && connection.open) {
-                    appendMessage('⚠️ Incoming connection ignored – already connected.', 'system');
-                    incomingConn.close();
-                    return;
-                }
-
-                connection = incomingConn;
-                setupConnectionListeners(connection);
-                appendMessage(`📞 Incoming connection from ${connection.peer}`, 'system');
-                updateConnectionStatus(`✅ Connected to ${connection.peer}`, true);
-                setControlsEnabled(true);
-            });
-        }
-
-        // ------------------------------------------------------------------
-        // CONNECTION LISTENERS (shared for outgoing and incoming)
-        // ------------------------------------------------------------------
-        function setupConnectionListeners(conn) {
-            conn.on('open', () => {
-                appendMessage(`🔗 Connection open with ${conn.peer}`, 'system');
-                updateConnectionStatus(`✅ Connected to ${conn.peer}`, true);
-                setControlsEnabled(true);
-                // The 'open' event fires once the data connection is ready.
-                // For outgoing connections, we already called conn.open().
-            });
-
-            conn.on('data', (data) => {
-                appendMessage(data, 'peer');
-            });
-
-            conn.on('close', () => {
-                appendMessage(`❌ Connection with ${conn.peer} closed`, 'system');
-                updateConnectionStatus('🔌 Not connected', false);
-                connection = null;
-                setControlsEnabled(false);
-                chatMessages.innerHTML = '<div style="color: #64748b;">Connection closed.</div>';
-            });
-
-            conn.on('error', (err) => {
-                appendMessage(`Connection error: ${err.message}`, 'system');
-                console.error('Connection error:', err);
-            });
-        }
-
-        // ------------------------------------------------------------------
-        // OUTGOING CONNECTION
-        // ------------------------------------------------------------------
-        function connectToPeer() {
-            const remoteId = remoteIdInput.value.trim();
-            if (!remoteId) {
-                appendMessage('Please enter a remote Peer ID.', 'system');
-                return;
-            }
-            if (!peer || !peer.id) {
-                appendMessage('Your peer is not initialised. Click "Initialise" first.', 'system');
-                return;
-            }
-            if (remoteId === peer.id) {
-                appendMessage('You cannot connect to yourself!', 'system');
-                return;
-            }
-            if (connection && connection.open) {
-                appendMessage('Already connected. Close the existing connection first.', 'system');
-                return;
-            }
-
-            appendMessage(`🔗 Attempting to connect to ${remoteId}...`, 'system');
-            const conn = peer.connect(remoteId, {
-                reliable: true
-            });
-
-            // The connection object is returned immediately; we must attach listeners.
-            connection = conn;
-            setupConnectionListeners(conn);
-
-            // If the connection doesn't open within a reasonable time, we could handle timeout.
-            // But PeerJS will emit 'error' if it fails.
-
-            // Update UI optimistically
-            updateConnectionStatus(`⏳ Connecting to ${remoteId}...`, false);
-            setControlsEnabled(false); // disable until open
-            conn.on('open', () => {
-                // This is also handled in setupConnectionListeners, but we re-enable here.
-                setControlsEnabled(true);
-            });
-        }
-
-        // ------------------------------------------------------------------
-        // SEND MESSAGE
-        // ------------------------------------------------------------------
-        function sendMessage() {
+        // -------- 发送消息 --------
+        function sendChatMessage() {
             const text = messageInput.value.trim();
-            if (!text) return;
-            if (!connection || !connection.open) {
-                appendMessage('No open connection to send message.', 'system');
-                return;
-            }
-            connection.send(text);
-            appendMessage(text, 'me');
+            if (!text || !sendMessage || !room) return;
+
+            // 发送给房间内所有人
+            sendMessage({ text });
+            addChatMessage(myPeerId, text, true);
             messageInput.value = '';
         }
 
-        // ------------------------------------------------------------------
-        // EVENT BINDINGS
-        // ------------------------------------------------------------------
-        initPeerBtn.addEventListener('click', initPeer);
-        connectBtn.addEventListener('click', connectToPeer);
-        sendBtn.addEventListener('click', sendMessage);
+        // -------- 事件绑定 --------
+        connectBtn.addEventListener('click', joinRoom);
+        sendBtn.addEventListener('click', sendChatMessage);
         messageInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') sendMessage();
+            if (e.key === 'Enter') sendChatMessage();
         });
 
-        // Auto-initialise on page load with auto-generated ID
-        window.addEventListener('load', () => {
-            // Optionally auto-init:
-            // initPeer();
-            // Or leave it for the user to click.
-            appendMessage('👋 Click "Initialise" to start.', 'system');
+        // 房间名回车快速连接
+        roomInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') joinRoom();
         });
 
-        // If the user presses Enter in remote ID field, trigger connect
-        remoteIdInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') connectBtn.click();
+        // 策略切换时更新提示
+        strategySelect.addEventListener('change', () => {
+            const map = {
+                nostr: '使用 Nostr 网络进行信令交换',
+                torrent: '使用 BitTorrent (WebTorrent) 网络',
+                mqtt: '使用 MQTT 协议 (需要公共 broker)',
+                ipfs: '使用 IPFS 网络'
+            };
+            document.querySelector('.hint')?.remove();
+            const hint = document.createElement('div');
+            hint.className = 'hint';
+            hint.textContent = '💡 ' + (map[strategySelect.value] || '');
+            strategySelect.parentNode.appendChild(hint);
         });
+        // 触发初始提示
+        strategySelect.dispatchEvent(new Event('change'));
+
+        // 页面加载后自动连接（可选）
+        // 取消注释下面一行可以自动加入房间
+        // setTimeout(joinRoom, 500);
+
+        addSystemMessage('🚀 选择策略和房间名，点击「加入房间」开始');
+        addSystemMessage('💡 在多个浏览器标签中打开此页面即可测试 P2P 通信');
+
+        console.log('🧪 Trystero 测试页面已加载');
+        console.log('💡 提示: 在多个标签页中打开此页面即可测试 P2P 通信');
     </script>
-
 </body>
 </html>
