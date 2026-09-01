@@ -97,7 +97,7 @@
 
     <!-- Game Screen -->
     <div id="game-screen" class="hidden">
-        <h4 id="connection-status" style="margin: 5px 0; color: #4CAF50;">Connecting...</h4>
+        <h4 id="connection-status" style="margin: 5px 0; color: #ffcc00;">Connecting...</h4>
         <canvas id="gameCanvas" width="400" height="300"></canvas>
         
         <!-- On-Screen Touch D-Pad -->
@@ -127,18 +127,25 @@
         let peer;
         let conn;
         
-        // Unique prefix prevents collisions on public PeerJS server
         const APP_PREFIX = "p2p_square_game_";
 
-        // Auto-suggest a random 4-digit code
+        // Multi-STUN configuration to help punch through strict mobile/PC NAT boundaries
+        const peerConfig = {
+            config: {
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:global.stun.twilio.com:3478' },
+                    { urls: 'stun:stun1.l.google.com:19302' }
+                ]
+            }
+        };
+
         hostCodeInput.value = Math.floor(1000 + Math.random() * 9000);
 
-        // Game Entities
         const myPos = { x: 50, y: 50, size: 25, color: '#ff5722', speed: 3.5 };
         const peerPos = { x: 300, y: 200, size: 25, color: '#2196F3' };
         const keys = {};
 
-        // Host Button Click
         hostBtn.addEventListener('click', () => {
             const code = hostCodeInput.value.trim();
             if (code.length !== 4) {
@@ -150,8 +157,7 @@
 
             if (peer) peer.destroy();
 
-            const fullId = APP_PREFIX + code;
-            peer = new Peer(fullId);
+            peer = new Peer(APP_PREFIX + code, peerConfig);
 
             peer.on('open', (id) => {
                 errorMsg.style.color = "#4CAF50";
@@ -161,7 +167,7 @@
             peer.on('error', (err) => {
                 errorMsg.style.color = "#ff5252";
                 if (err.type === 'unavailable-id') {
-                    errorMsg.innerText = "That 4-digit code is currently in use. Try another.";
+                    errorMsg.innerText = "That 4-digit code is already taken. Try another.";
                 } else {
                     errorMsg.innerText = `PeerJS Error: ${err.type}`;
                 }
@@ -173,7 +179,6 @@
             });
         });
 
-        // Join Button Click
         joinBtn.addEventListener('click', () => {
             const code = joinCodeInput.value.trim();
             if (code.length !== 4) {
@@ -185,25 +190,46 @@
 
             if (peer) peer.destroy();
 
-            peer = new Peer(); // Client creates a temporary random ID to connect outbound
+            peer = new Peer(peerConfig);
 
             peer.on('open', () => {
-                const fullId = APP_PREFIX + code;
-                conn = peer.connect(fullId);
+                conn = peer.connect(APP_PREFIX + code);
                 setupConnectionHandlers();
             });
 
             peer.on('error', (err) => {
                 errorMsg.style.color = "#ff5252";
-                errorMsg.innerText = `Could not connect: Check code or try again.`;
+                errorMsg.innerText = `Connection failed: Check the code.`;
             });
         });
 
         function setupConnectionHandlers() {
+            // Jump straight to the game UI to show live connection diagnostics
+            setupScreen.classList.add('hidden');
+            gameScreen.classList.remove('hidden');
+            requestAnimationFrame(gameLoop);
+
             conn.on('open', () => {
+                connectionStatus.style.color = "#4CAF50";
                 connectionStatus.innerText = "Connected Peer-to-Peer!";
-                startGameUI();
             });
+
+            // Monitor underlying WebRTC connection states (helps diagnose mobile network drops)
+            if (conn.peerConnection) {
+                conn.peerConnection.oniceconnectionstatechange = () => {
+                    const state = conn.peerConnection.iceConnectionState;
+                    if (state === 'connected' || state === 'completed') {
+                        connectionStatus.style.color = "#4CAF50";
+                        connectionStatus.innerText = "Connected Peer-to-Peer!";
+                    } else if (state === 'checking') {
+                        connectionStatus.style.color = "#ffcc00";
+                        connectionStatus.innerText = "Negotiating network path...";
+                    } else if (state === 'failed' || state === 'disconnected') {
+                        connectionStatus.style.color = "#ff5252";
+                        connectionStatus.innerText = `Blocked by firewall (${state}). Try Wi-Fi instead of data.`;
+                    }
+                };
+            }
 
             conn.on('data', (data) => {
                 peerPos.x = data.x;
@@ -214,23 +240,11 @@
                 alert("Connection lost with the other player.");
                 location.reload();
             });
-
-            conn.on('error', (err) => {
-                connectionStatus.innerText = "Data channel error.";
-            });
         }
 
-        function startGameUI() {
-            setupScreen.classList.add('hidden');
-            gameScreen.classList.remove('hidden');
-            requestAnimationFrame(gameLoop);
-        }
-
-        // Keyboard Support (Desktop)
         window.addEventListener('keydown', (e) => { keys[e.key] = true; });
         window.addEventListener('keyup', (e) => { keys[e.key] = false; });
 
-        // Touch Support (Mobile D-Pad)
         const bindTouchButton = (id, keyName) => {
             const btn = document.getElementById(id);
             const activate = (e) => { e.preventDefault(); keys[keyName] = true; btn.classList.add('active'); };
@@ -254,11 +268,9 @@
             if (keys['ArrowLeft'] || keys['a'] || keys['A']) myPos.x -= myPos.speed;
             if (keys['ArrowRight'] || keys['d'] || keys['D']) myPos.x += myPos.speed;
 
-            // Screen boundaries
             myPos.x = Math.max(0, Math.min(canvas.width - myPos.size, myPos.x));
             myPos.y = Math.max(0, Math.min(canvas.height - myPos.size, myPos.y));
 
-            // Transmit position directly to peer browser
             if (conn && conn.open) {
                 conn.send({ x: myPos.x, y: myPos.y });
             }
@@ -266,12 +278,8 @@
 
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Draw My Square
             ctx.fillStyle = myPos.color;
             ctx.fillRect(myPos.x, myPos.y, myPos.size, myPos.size);
-
-            // Draw Peer's Square
             ctx.fillStyle = peerPos.color;
             ctx.fillRect(peerPos.x, peerPos.y, peerPos.size, peerPos.size);
         }
