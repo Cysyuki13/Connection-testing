@@ -3,12 +3,9 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Trystero P2P 聊天室测试</title>
+    <title>NetplayJS P2P 多人测试</title>
     <style>
-        * {
-            box-sizing: border-box;
-            font-family: system-ui, -apple-system, sans-serif;
-        }
+        * { box-sizing: border-box; font-family: system-ui, sans-serif; }
         body {
             max-width: 700px;
             margin: 2rem auto;
@@ -22,16 +19,8 @@
             padding: 1.5rem;
             margin-bottom: 1.5rem;
         }
-        h1 {
-            margin: 0 0 0.25rem;
-            font-size: 1.6rem;
-            color: #0f172a;
-        }
-        .subtitle {
-            color: #475569;
-            margin: 0 0 1rem;
-            font-size: 0.95rem;
-        }
+        h1 { margin: 0 0 0.25rem; font-size: 1.6rem; color: #0f172a; }
+        .subtitle { color: #475569; margin: 0 0 1rem; font-size: 0.95rem; }
         .status-bar {
             display: flex;
             flex-wrap: wrap;
@@ -49,18 +38,14 @@
         }
         .status-dot {
             display: inline-block;
-            width: 10px;
-            height: 10px;
+            width: 10px; height: 10px;
             border-radius: 50%;
             margin-right: 4px;
         }
         .status-dot.online { background: #22c55e; }
         .status-dot.offline { background: #94a3b8; }
         .status-dot.connecting { background: #eab308; animation: pulse 1s infinite; }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
-        }
+        @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
 
         .peer-list {
             display: flex;
@@ -76,11 +61,6 @@
             font-size: 0.8rem;
             font-family: monospace;
         }
-        .peer-tag.self {
-            background: #dcfce7;
-            color: #166534;
-        }
-
         .messages {
             background: #f8fafc;
             border: 1px solid #e2e8f0;
@@ -94,22 +74,13 @@
         .messages .msg {
             padding: 0.2rem 0;
             border-bottom: 1px solid #f1f5f9;
-            word-break: break-word;
         }
-        .messages .msg .meta {
-            color: #64748b;
-            font-size: 0.8rem;
-            margin-right: 0.4rem;
-        }
-        .messages .msg .meta.me { color: #2563eb; }
-        .messages .msg .meta.other { color: #7c3aed; }
         .messages .system {
             color: #64748b;
             font-style: italic;
             font-size: 0.85rem;
             padding: 0.15rem 0;
         }
-
         .row {
             display: flex;
             gap: 0.5rem;
@@ -138,16 +109,7 @@
             white-space: nowrap;
         }
         button:hover:not(:disabled) { background: #1d4ed8; }
-        button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        button.secondary {
-            background: #e2e8f0;
-            color: #1e293b;
-        }
-        button.secondary:hover:not(:disabled) { background: #cbd5e1; }
-
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
         .config-row {
             display: flex;
             flex-wrap: wrap;
@@ -155,68 +117,70 @@
             align-items: center;
             margin-bottom: 0.75rem;
         }
-        .config-row label {
-            font-weight: 600;
-            font-size: 0.9rem;
-            color: #334155;
-        }
-        .config-row select, .config-row input[type="text"] {
+        .config-row label { font-weight: 600; font-size: 0.9rem; color: #334155; }
+        .config-row input[type="text"] {
             padding: 0.3rem 0.6rem;
             border: 1px solid #cbd5e1;
             border-radius: 6px;
             font-size: 0.9rem;
-            background: white;
-        }
-        .config-row input[type="text"] {
             flex: 1;
             min-width: 120px;
         }
-        .hint {
-            font-size: 0.8rem;
-            color: #64748b;
-            margin-top: 0.3rem;
+        .counter-box {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin: 0.5rem 0;
+        }
+        .counter-box span {
+            font-size: 1.5rem;
+            font-weight: bold;
+            min-width: 3rem;
+            text-align: center;
         }
     </style>
 </head>
 <body>
 
-    <h1>🧪 Trystero P2P 测试</h1>
-    <p class="subtitle">基于 Trystero 的 WebRTC 直连聊天室 · 无需服务器</p>
+    <h1>🎮 NetplayJS P2P 多人测试</h1>
+    <p class="subtitle">使用 NetplayJS 的回滚网络 · 无需服务器</p>
 
     <div class="card">
         <div class="config-row">
-            <label for="strategySelect">信令策略</label>
-            <select id="strategySelect">
-                <option value="nostr">Nostr (默认)</option>
-                <option value="torrent">BitTorrent</option>
-                <option value="mqtt">MQTT</option>
-                <option value="ipfs">IPFS</option>
-            </select>
             <label for="roomInput">房间名</label>
-            <input type="text" id="roomInput" value="trystero-test-room" />
-            <button id="connectBtn">🔄 加入房间</button>
+            <input type="text" id="roomInput" value="netplay-test-room" />
+            <button id="connectBtn">🚀 加入房间</button>
         </div>
-
         <div class="status-bar">
             <span>
                 <span class="status-dot offline" id="statusDot"></span>
                 <span id="statusText">未连接</span>
             </span>
             <span>🆔 我的ID: <strong id="myIdDisplay">—</strong></span>
-            <span>👥 在线: <strong id="peerCount">0</strong></span>
+            <span>👥 玩家数: <strong id="playerCount">0</strong></span>
         </div>
-
         <div>
-            <div style="font-weight:600; font-size:0.9rem; color:#334155; margin-top:0.5rem;">房间内的其他成员</div>
-            <div class="peer-list" id="peerList">
+            <div style="font-weight:600; font-size:0.9rem; color:#334155; margin-top:0.5rem;">房间内的玩家</div>
+            <div class="peer-list" id="playerList">
                 <span style="color:#94a3b8; font-size:0.85rem;">暂无</span>
             </div>
         </div>
     </div>
 
     <div class="card">
+        <h3>📊 共享计数器 (点击增加)</h3>
+        <div class="counter-box">
+            <button id="decrementBtn" disabled>−</button>
+            <span id="counterDisplay">0</span>
+            <button id="incrementBtn" disabled>+</button>
+        </div>
+        <div style="font-size:0.85rem; color:#64748b;">所有玩家看到的数值将自动同步</div>
+    </div>
+
+    <div class="card">
+        <h3>💬 聊天</h3>
         <div class="messages" id="messageContainer">
-            <div class="system">💡 点击「加入房间」开始测试</div>
+            <div class="system">💡 点击「加入房间」开始</div>
         </div>
         <div class="row">
             <input type="text" id="messageInput" placeholder="输入消息..." disabled />
@@ -224,38 +188,38 @@
         </div>
     </div>
 
+    <!-- NetplayJS 使用 ESM 方式加载 -->
     <script type="importmap">
         {
             "imports": {
-                "trystero": "https://esm.run/trystero@0.25.3",
-                "trystero/torrent": "https://esm.run/trystero@0.25.3/torrent",
-                "trystero/mqtt": "https://esm.run/trystero@0.25.3/mqtt",
-                "trystero/ipfs": "https://esm.run/trystero@0.25.3/ipfs"
+                "netplayjs": "https://esm.sh/netplayjs@0.18.0"
             }
         }
     </script>
 
     <script type="module">
-        // -------- 导入 Trystero --------
-        // 根据选择的策略动态导入
+        // -------- 导入 NetplayJS --------
+        import { Netplay, Host, Client } from 'netplayjs';
+
         // -------- DOM 引用 --------
-        const strategySelect = document.getElementById('strategySelect');
         const roomInput = document.getElementById('roomInput');
         const connectBtn = document.getElementById('connectBtn');
         const statusDot = document.getElementById('statusDot');
         const statusText = document.getElementById('statusText');
         const myIdDisplay = document.getElementById('myIdDisplay');
-        const peerCount = document.getElementById('peerCount');
-        const peerList = document.getElementById('peerList');
+        const playerCount = document.getElementById('playerCount');
+        const playerList = document.getElementById('playerList');
         const messageContainer = document.getElementById('messageContainer');
         const messageInput = document.getElementById('messageInput');
         const sendBtn = document.getElementById('sendBtn');
+        const counterDisplay = document.getElementById('counterDisplay');
+        const incrementBtn = document.getElementById('incrementBtn');
+        const decrementBtn = document.getElementById('decrementBtn');
 
         // -------- 状态 --------
-        let room = null;
-        let sendMessage = null;
-        let myPeerId = null;
-        let peerIds = new Set();
+        let netplay = null;
+        let myPlayerId = null;
+        let playerIds = new Set();
 
         // -------- 辅助函数 --------
         function setStatus(state, text) {
@@ -271,42 +235,37 @@
             messageContainer.scrollTop = messageContainer.scrollHeight;
         }
 
-        function addChatMessage(peerId, text, isMe = false) {
+        function addChatMessage(playerId, text, isMe = false) {
             const div = document.createElement('div');
             div.className = 'msg';
-            const meta = document.createElement('span');
-            meta.className = 'meta' + (isMe ? ' me' : ' other');
-            meta.textContent = isMe ? '🧑 我' : `👤 ${peerId.slice(0, 8)}`;
-            div.appendChild(meta);
-            div.appendChild(document.createTextNode(text));
+            const prefix = isMe ? '🧑 我' : `👤 ${playerId.slice(0, 6)}`;
+            div.textContent = `[${prefix}] ${text}`;
             messageContainer.appendChild(div);
             messageContainer.scrollTop = messageContainer.scrollHeight;
         }
 
-        function updatePeerList() {
-            const allPeers = Array.from(peerIds);
-            peerCount.textContent = allPeers.length;
-            if (allPeers.length === 0) {
-                peerList.innerHTML = '<span style="color:#94a3b8; font-size:0.85rem;">暂无其他成员</span>';
-                return;
+        function updatePlayerList() {
+            const all = Array.from(playerIds).filter(id => id !== myPlayerId);
+            playerCount.textContent = all.length + 1; // 包括自己
+            if (all.length === 0) {
+                playerList.innerHTML = '<span style="color:#94a3b8; font-size:0.85rem;">只有你自己</span>';
+            } else {
+                playerList.innerHTML = all.map(id =>
+                    `<span class="peer-tag">${id}</span>`
+                ).join('');
             }
-            peerList.innerHTML = allPeers.map(id =>
-                `<span class="peer-tag">${id === myPeerId ? '⭐ ' : ''}${id}</span>`
-            ).join('');
         }
 
         // -------- 核心：加入房间 --------
         async function joinRoom() {
-            const strategy = strategySelect.value;
-            const roomId = roomInput.value.trim() || 'default-room';
+            const roomName = roomInput.value.trim() || 'default-room';
 
-            // 断开旧连接
-            if (room) {
-                // Trystero 没有显式的 leave 方法，但我们可以清理引用
-                room = null;
-                sendMessage = null;
-                peerIds.clear();
-                updatePeerList();
+            if (netplay) {
+                // 简单的清理，NetplayJS 没有显式销毁方法，我们重置引用
+                netplay = null;
+                myPlayerId = null;
+                playerIds.clear();
+                updatePlayerList();
                 addSystemMessage('已离开旧房间');
             }
 
@@ -314,175 +273,155 @@
             connectBtn.disabled = true;
             messageInput.disabled = true;
             sendBtn.disabled = true;
+            incrementBtn.disabled = true;
+            decrementBtn.disabled = true;
 
             try {
-                // 动态导入对应的策略
-                let joinRoomFn;
-                switch (strategy) {
-                    case 'torrent':
-                        const torrentModule = await import('trystero/torrent');
-                        joinRoomFn = torrentModule.joinRoom;
-                        break;
-                    case 'mqtt':
-                        const mqttModule = await import('trystero/mqtt');
-                        joinRoomFn = mqttModule.joinRoom;
-                        break;
-                    case 'ipfs':
-                        const ipfsModule = await import('trystero/ipfs');
-                        joinRoomFn = ipfsModule.joinRoom;
-                        break;
-                    default: // nostr
-                        const nostrModule = await import('trystero');
-                        joinRoomFn = nostrModule.joinRoom;
-                        break;
-                }
+                // 创建 Netplay 实例
+                // NetplayJS 使用信令服务器 (默认公共服务器: wss://signal.netplayjs.com)
+                // 也支持自定义信令服务器，但这里用默认
+                netplay = new Netplay({
+                    // 信令服务器地址（可以使用免费公共服务器）
+                    signalServer: 'wss://signal.netplayjs.com',
+                    // 房间名
+                    room: roomName,
+                    // 玩家信息（可选）
+                    playerData: { name: 'Player-' + Math.random().toString(36).slice(2, 6) }
+                });
 
-                // 配置：appId 必须唯一标识你的应用
-                const config = {
-                    appId: 'my-trystero-chat-app-v1'
+                // 监听连接事件
+                netplay.on('connect', (playerId) => {
+                    myPlayerId = playerId;
+                    myIdDisplay.textContent = myPlayerId;
+                    setStatus('online', '已连接');
+                    addSystemMessage(`✅ 已加入房间，你的ID: ${myPlayerId}`);
+                    connectBtn.disabled = false;
+                    messageInput.disabled = false;
+                    sendBtn.disabled = false;
+                    incrementBtn.disabled = false;
+                    decrementBtn.disabled = false;
+
+                    // 把自己加入列表
+                    playerIds.add(myPlayerId);
+                    updatePlayerList();
+                });
+
+                netplay.on('disconnect', () => {
+                    setStatus('offline', '已断开');
+                    addSystemMessage('⚠️ 与房间断开连接');
+                    connectBtn.disabled = false;
+                    messageInput.disabled = true;
+                    sendBtn.disabled = true;
+                    incrementBtn.disabled = true;
+                    decrementBtn.disabled = true;
+                    playerIds.clear();
+                    updatePlayerList();
+                });
+
+                netplay.on('playerJoin', (playerId) => {
+                    if (playerId !== myPlayerId) {
+                        playerIds.add(playerId);
+                        updatePlayerList();
+                        addSystemMessage(`👋 ${playerId} 加入了房间`);
+                    }
+                });
+
+                netplay.on('playerLeave', (playerId) => {
+                    if (playerIds.has(playerId)) {
+                        playerIds.delete(playerId);
+                        updatePlayerList();
+                        addSystemMessage(`👋 ${playerId} 离开了房间`);
+                    }
+                });
+
+                // -------- 同步状态 (计数器) --------
+                // 定义共享状态：一个计数器
+                const initialState = { counter: 0 };
+                // 创建主机（如果是第一个加入的自动成为主机，或使用 netplay.host）
+                // NetplayJS 会自动处理主机选举，我们只需使用 netplay.state
+                const state = netplay.state(initialState);
+
+                // 监听状态变化
+                state.onChange((newState) => {
+                    counterDisplay.textContent = newState.counter;
+                });
+
+                // 修改计数器的方法
+                const changeCounter = (delta) => {
+                    if (!netplay) return;
+                    // 通过 netplay.send 发送操作，框架会自动同步
+                    // 但更推荐使用 netplay.action 来定义操作
                 };
 
-                // 加入房间
-                room = joinRoomFn(config, roomId);
+                // 使用 action 定义操作（更规范）
+                const incrementAction = netplay.action('increment', (state) => {
+                    state.counter += 1;
+                });
 
-                // -------- 监听房间事件 --------
-                room.onPeerJoin((peerId) => {
-                    if (peerId !== myPeerId) {
-                        peerIds.add(peerId);
-                        updatePeerList();
-                        addSystemMessage(`👋 ${peerId} 加入了房间`);
+                const decrementAction = netplay.action('decrement', (state) => {
+                    state.counter -= 1;
+                });
+
+                // 绑定按钮
+                incrementBtn.onclick = () => {
+                    if (incrementAction) incrementAction();
+                };
+                decrementBtn.onclick = () => {
+                    if (decrementAction) decrementAction();
+                };
+
+                // -------- 聊天功能 (使用 netplay.send 发送自定义消息) --------
+                // 监听消息
+                netplay.on('message', (data, senderId) => {
+                    if (senderId === myPlayerId) return;
+                    if (data.type === 'chat') {
+                        addChatMessage(senderId, data.text, false);
                     }
                 });
 
-                room.onPeerLeave((peerId) => {
-                    if (peerIds.has(peerId)) {
-                        peerIds.delete(peerId);
-                        updatePeerList();
-                        addSystemMessage(`👋 ${peerId} 离开了房间`);
+                // 发送消息函数
+                window.sendChatMessage = (text) => {
+                    if (!netplay) return;
+                    netplay.send({ type: 'chat', text });
+                    addChatMessage(myPlayerId, text, true);
+                };
+
+                // 绑定发送按钮
+                sendBtn.onclick = () => {
+                    const text = messageInput.value.trim();
+                    if (text) {
+                        window.sendChatMessage(text);
+                        messageInput.value = '';
                     }
+                };
+                messageInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') sendBtn.click();
                 });
 
-                // 获取自己的 ID（Trystero 通过 onPeerJoin 回调会收到自己的 ID）
-                // 但我们需要在连接后获取，这里用一个 Promise 来等待
-                const selfIdPromise = new Promise((resolve) => {
-                    const handler = (peerId) => {
-                        if (!myPeerId) {
-                            myPeerId = peerId;
-                            myIdDisplay.textContent = myPeerId;
-                            resolve(peerId);
-                        }
-                    };
-                    // 如果已经触发了，直接 resolve
-                    if (myPeerId) {
-                        resolve(myPeerId);
-                        return;
-                    }
-                    // 否则监听
-                    room.onPeerJoin(handler);
-                    // 但 onPeerJoin 对自身只会触发一次，如果已经错过了，我们需要另一种方式
-                    // Trystero 在 joinRoom 后可以通过 room.id 获取？实际上没有直接暴露
-                    // 这里用一个小技巧：如果 2 秒后还没获取到，就假设已经获取了
-                    setTimeout(() => {
-                        if (!myPeerId) {
-                            // 尝试从 peerIds 中获取第一个？但可能还没有其他 peer
-                            // 这种情况下我们生成一个临时 ID 显示
-                            myPeerId = 'loading...';
-                            myIdDisplay.textContent = myPeerId;
-                            resolve(null);
-                        }
-                    }, 2000);
-                });
-
-                // -------- 创建消息通道 (Action) --------
-                const [send, receive] = room.makeAction('chat');
-                sendMessage = send;
-
-                // 接收消息
-                receive((data, peerId) => {
-                    if (peerId === myPeerId) return; // 忽略自己发出的（但通常不会收到自己的）
-                    addChatMessage(peerId, data.text, false);
-                });
-
-                // 等待获取自己的 ID
-                await selfIdPromise;
-
-                // 如果还没有 myPeerId（可能超时），再次尝试从 room 获取
-                // 实际上我们可以通过 onPeerJoin 来获取，但如果超时了，就显示为 unknown
-                if (!myPeerId || myPeerId === 'loading...') {
-                    myPeerId = 'unknown-' + Math.random().toString(36).slice(2, 6);
-                    myIdDisplay.textContent = myPeerId;
-                }
-
-                // 把自己加入列表
-                peerIds.add(myPeerId);
-                updatePeerList();
-
-                setStatus('online', '已连接');
-                connectBtn.disabled = false;
-                messageInput.disabled = false;
-                sendBtn.disabled = false;
-                addSystemMessage(`✅ 已加入房间 "${roomId}" (策略: ${strategy})`);
-
-                // 广播一条系统消息（通过聊天通道）
-                // 但这里不发送，因为刚加入时其他 peer 可能还没准备好
+                // 连接（Netplay 构造函数会自动连接，但我们需要等待 connect 事件）
+                // 上面已经设置了监听，现在调用 netplay.connect() 显式连接
+                netplay.connect();
 
             } catch (err) {
-                console.error('Trystero 连接失败:', err);
+                console.error('NetplayJS 连接失败:', err);
                 setStatus('offline', '连接失败');
                 connectBtn.disabled = false;
                 addSystemMessage(`❌ 连接失败: ${err.message}`);
             }
         }
 
-        // -------- 发送消息 --------
-        function sendChatMessage() {
-            const text = messageInput.value.trim();
-            if (!text || !sendMessage || !room) return;
-
-            // 发送给房间内所有人
-            sendMessage({ text });
-            addChatMessage(myPeerId, text, true);
-            messageInput.value = '';
-        }
-
         // -------- 事件绑定 --------
         connectBtn.addEventListener('click', joinRoom);
-        sendBtn.addEventListener('click', sendChatMessage);
-        messageInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') sendChatMessage();
-        });
-
-        // 房间名回车快速连接
         roomInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') joinRoom();
         });
 
-        // 策略切换时更新提示
-        strategySelect.addEventListener('change', () => {
-            const map = {
-                nostr: '使用 Nostr 网络进行信令交换',
-                torrent: '使用 BitTorrent (WebTorrent) 网络',
-                mqtt: '使用 MQTT 协议 (需要公共 broker)',
-                ipfs: '使用 IPFS 网络'
-            };
-            document.querySelector('.hint')?.remove();
-            const hint = document.createElement('div');
-            hint.className = 'hint';
-            hint.textContent = '💡 ' + (map[strategySelect.value] || '');
-            strategySelect.parentNode.appendChild(hint);
-        });
-        // 触发初始提示
-        strategySelect.dispatchEvent(new Event('change'));
+        addSystemMessage('🚀 点击「加入房间」开始');
+        addSystemMessage('💡 打开多个标签页（或不同设备）测试 P2P 同步');
+        console.log('🎮 NetplayJS 测试页面已加载');
 
-        // 页面加载后自动连接（可选）
-        // 取消注释下面一行可以自动加入房间
-        // setTimeout(joinRoom, 500);
-
-        addSystemMessage('🚀 选择策略和房间名，点击「加入房间」开始');
-        addSystemMessage('💡 在多个浏览器标签中打开此页面即可测试 P2P 通信');
-
-        console.log('🧪 Trystero 测试页面已加载');
-        console.log('💡 提示: 在多个标签页中打开此页面即可测试 P2P 通信');
+        // 注意: NetplayJS 的公共信令服务器可能有时不稳定，如果连接失败，可尝试更换信号服务器。
+        // 也可以自建信令服务器，见 https://github.com/NetplayJS/netplayjs
     </script>
 </body>
 </html>
