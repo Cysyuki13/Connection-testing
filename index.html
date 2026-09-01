@@ -73,8 +73,8 @@
             background-color: #ff5722;
         }
     </style>
-    <!-- PeerJS CDN -->
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <!-- Use jsDelivr CDN to avoid tracking prevention issues -->
+    <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js"></script>
 </head>
 <body>
 
@@ -129,7 +129,6 @@
         
         const APP_PREFIX = "p2p_square_game_";
 
-        // Multi-STUN configuration to help punch through strict mobile/PC NAT boundaries
         const peerConfig = {
             config: {
                 iceServers: [
@@ -204,7 +203,6 @@
         });
 
         function setupConnectionHandlers() {
-            // Jump straight to the game UI to show live connection diagnostics
             setupScreen.classList.add('hidden');
             gameScreen.classList.remove('hidden');
             requestAnimationFrame(gameLoop);
@@ -214,7 +212,6 @@
                 connectionStatus.innerText = "Connected Peer-to-Peer!";
             });
 
-            // Monitor underlying WebRTC connection states (helps diagnose mobile network drops)
             if (conn.peerConnection) {
                 conn.peerConnection.oniceconnectionstatechange = () => {
                     const state = conn.peerConnection.iceConnectionState;
@@ -226,7 +223,7 @@
                         connectionStatus.innerText = "Negotiating network path...";
                     } else if (state === 'failed' || state === 'disconnected') {
                         connectionStatus.style.color = "#ff5252";
-                        connectionStatus.innerText = `Blocked by firewall (${state}). Try Wi-Fi instead of data.`;
+                        connectionStatus.innerText = `Firewall blocked direct P2P (${state}).`;
                     }
                 };
             }
