@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mobile P2P Game</title>
+    <title>4-Digit P2P Game</title>
     <style>
         body {
             background-color: #1a1a1a;
@@ -25,11 +25,19 @@
         .hidden { display: none !important; }
         input, button {
             padding: 12px;
-            font-size: 16px;
+            font-size: 18px;
             margin: 6px;
             border-radius: 8px;
             border: none;
             box-sizing: border-box;
+        }
+        input[type="text"] {
+            background: #333;
+            color: white;
+            text-align: center;
+            letter-spacing: 4px;
+            font-weight: bold;
+            width: 160px;
         }
         button {
             background-color: #4CAF50;
@@ -38,9 +46,7 @@
             touch-action: manipulation;
         }
         button:active { background-color: #388E3C; }
-        input { background: #333; color: white; width: 80%; max-width: 300px; }
         
-        /* Mobile On-Screen D-Pad Styles */
         #mobile-controls {
             display: flex;
             flex-direction: column;
@@ -72,19 +78,20 @@
 </head>
 <body>
 
-    <h2>Mobile-Friendly P2P Game</h2>
+    <h2>4-Digit Code P2P Game</h2>
 
     <!-- Setup / Connection Screen -->
     <div id="setup-screen">
-        <p><b>Step 1:</b> Generate ID to Host</p>
-        <button id="host-btn">Create Game (Host)</button>
-        <p id="my-id-display" style="word-break: break-all; padding: 0 10px; color: #aaa;">Waiting for network...</p>
+        <p><b>Host:</b> Enter or generate a 4-digit code</p>
+        <input type="text" id="host-code-input" maxlength="4" inputmode="numeric" placeholder="1234"><br>
+        <button id="host-btn">Host Game</button>
         
-        <hr style="width: 80%; margin: 15px auto; border-color: #444;">
+        <hr style="width: 80%; margin: 20px auto; border-color: #444;">
         
-        <p><b>Step 2:</b> Or Join an existing game</p>
-        <input type="text" id="peer-id-input" placeholder="Paste Host ID here" autocomplete="off"><br>
+        <p><b>Join:</b> Enter friend's 4-digit code</p>
+        <input type="text" id="join-code-input" maxlength="4" inputmode="numeric" placeholder="1234"><br>
         <button id="join-btn" style="background-color: #2196F3;">Join Game</button>
+        
         <p id="error-msg" style="color: #ff5252; margin-top: 10px; font-size: 14px;"></p>
     </div>
 
@@ -93,7 +100,7 @@
         <h4 id="connection-status" style="margin: 5px 0; color: #4CAF50;">Connecting...</h4>
         <canvas id="gameCanvas" width="400" height="300"></canvas>
         
-        <!-- On-Screen Touch Controls (Works on Mobile & Desktop) -->
+        <!-- On-Screen Touch D-Pad -->
         <div id="mobile-controls">
             <div><button class="ctrl-btn" id="btn-up">⬆️</button></div>
             <div class="control-row">
@@ -109,8 +116,8 @@
         const gameScreen = document.getElementById('game-screen');
         const hostBtn = document.getElementById('host-btn');
         const joinBtn = document.getElementById('join-btn');
-        const peerIdInput = document.getElementById('peer-id-input');
-        const myIdDisplay = document.getElementById('my-id-display');
+        const hostCodeInput = document.getElementById('host-code-input');
+        const joinCodeInput = document.getElementById('join-code-input');
         const connectionStatus = document.getElementById('connection-status');
         const errorMsg = document.getElementById('error-msg');
         
@@ -121,63 +128,78 @@
         let conn;
         let isHost = false;
 
+        // Auto-suggest a random 4-digit code for convenience
+        hostCodeInput.value = Math.floor(1000 + Math.random() * 9000);
+
         // Game Entities
         const myPos = { x: 50, y: 50, size: 25, color: '#ff5722', speed: 3.5 };
         const peerPos = { x: 300, y: 200, size: 25, color: '#2196F3' };
         const keys = {};
 
-        function initPeer() {
-            // Initialize PeerJS cleanly with explicit error catching to avoid silent fails
-            try {
-                peer = new Peer();
-
-                peer.on('open', (id) => {
-                    myIdDisplay.innerText = `Your ID: ${id}`;
-                });
-
-                peer.on('error', (err) => {
-                    console.error("PeerJS Error:", err);
-                    errorMsg.innerText = `Error: ${err.type}. Check connection or refresh.`;
-                });
-
-                peer.on('connection', (connection) => {
-                    conn = connection;
-                    isHost = true;
-                    setupConnectionHandlers();
-                    startGameUI();
-                });
-            } catch (e) {
-                errorMsg.innerText = "Failed to initialize network layer.";
-            }
-        }
-
-        initPeer();
-
+        // Host Button Click
         hostBtn.addEventListener('click', () => {
-            if (!peer || !peer.id) {
-                errorMsg.innerText = "Network still initializing, please wait 2 seconds.";
-            } else {
-                errorMsg.innerText = "";
-                myIdDisplay.innerText = `Hosting! Give this ID to your friend: ${peer.id}`;
-            }
-        });
-
-        joinBtn.addEventListener('click', () => {
-            const remoteId = peerIdInput.value.trim();
-            if (!remoteId) {
-                errorMsg.innerText = "Please paste a valid Host ID first.";
+            const code = hostCodeInput.value.trim();
+            if (code.length !== 4) {
+                errorMsg.innerText = "Code must be exactly 4 digits.";
                 return;
             }
-            errorMsg.innerText = "";
-            isHost = false;
-            conn = peer.connect(remoteId);
-            setupConnectionHandlers();
-            startGameUI();
+            errorMsg.innerText = "Hosting... waiting for player.";
+
+            if (peer) peer.destroy();
+
+            // Initialize Peer with custom 4-digit ID
+            peer = new Peer(code);
+
+            peer.on('open', (id) => {
+                errorMsg.style.color = "#4CAF50";
+                errorMsg.innerText = `Hosting with code: ${id}. Tell your friend to join!`;
+            });
+
+            peer.on('error', (err) => {
+                errorMsg.style.color = "#ff5252";
+                if (err.type === 'unavailable-id') {
+                    errorMsg.innerText = "That 4-digit code is already taken globally. Try another.";
+                } else {
+                    errorMsg.innerText = `Error: ${err.type}`;
+                }
+            });
+
+            peer.on('connection', (connection) => {
+                conn = connection;
+                isHost = true;
+                setupConnectionHandlers();
+                startGameUI();
+            });
+        });
+
+        // Join Button Click
+        joinBtn.addEventListener('click', () => {
+            const code = joinCodeInput.value.trim();
+            if (code.length !== 4) {
+                errorMsg.innerText = "Please enter a valid 4-digit code.";
+                return;
+            }
+            errorMsg.style.color = "#ff5252";
+            errorMsg.innerText = "Connecting to host...";
+
+            if (peer) peer.destroy();
+
+            peer = new Peer(); // Client creates a temporary random ID to connect outbound
+
+            peer.on('open', () => {
+                conn = peer.connect(code);
+                setupConnectionHandlers();
+            });
+
+            peer.on('error', (err) => {
+                errorMsg.innerText = "Could not connect. Check the 4-digit code.";
+            });
         });
 
         function setupConnectionHandlers() {
             conn.on('open', () => {
                 connectionStatus.innerText = "Connected Peer-to-Peer!";
+                startGameUI();
             });
 
             conn.on('data', (data) => {
@@ -188,10 +210,6 @@
             conn.on('close', () => {
                 alert("Connection lost with the other player.");
                 location.reload();
-            });
-
-            conn.on('error', (err) => {
-                connectionStatus.innerText = "Data channel error.";
             });
         }
 
@@ -205,7 +223,7 @@
         window.addEventListener('keydown', (e) => { keys[e.key] = true; });
         window.addEventListener('keyup', (e) => { keys[e.key] = false; });
 
-        // Touch & Mouse Button Support (Mobile)
+        // Touch Support (Mobile D-Pad)
         const bindTouchButton = (id, keyName) => {
             const btn = document.getElementById(id);
             const activate = (e) => { e.preventDefault(); keys[keyName] = true; btn.classList.add('active'); };
@@ -229,7 +247,7 @@
             if (keys['ArrowLeft'] || keys['a'] || keys['A']) myPos.x -= myPos.speed;
             if (keys['ArrowRight'] || keys['d'] || keys['D']) myPos.x += myPos.speed;
 
-            // Boundaries
+            // Screen boundaries
             myPos.x = Math.max(0, Math.min(canvas.width - myPos.size, myPos.x));
             myPos.y = Math.max(0, Math.min(canvas.height - myPos.size, myPos.y));
 
