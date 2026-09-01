@@ -1,1330 +1,187 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>P2P Tic-Tac-Toe</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P2P GitHub Pages Game</title>
     <style>
-        /* ───────────── Reset & Base ───────────── */
-        *,
-        *::before,
-        *::after {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        :root {
-            --bg: #0f0e17;
-            --surface: #1a1932;
-            --surface-light: #2a2848;
-            --primary: #ff8906;
-            --primary-glow: rgba(255, 137, 6, 0.3);
-            --secondary: #a7a9be;
-            --text: #fffffe;
-            --text-dim: #8a8aa0;
-            --x-color: #ff6b6b;
-            --o-color: #4ecdc4;
-            --radius: 16px;
-            --shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-            --transition: 0.25s ease;
-        }
-
         body {
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-            background-image: radial-gradient(ellipse at 30% 20%, #1a1a3e 0%, #0f0e17 70%);
-        }
-
-        /* ───────────── Container ───────────── */
-        .container {
-            background: var(--surface);
-            border-radius: var(--radius);
-            padding: 32px 28px 28px;
-            max-width: 580px;
-            width: 100%;
-            box-shadow: var(--shadow);
-            border: 1px solid rgba(255, 255, 255, 0.04);
-            backdrop-filter: blur(2px);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .container::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle at 50% 0%, var(--primary-glow), transparent 70%);
-            opacity: 0.06;
-            pointer-events: none;
-        }
-
-        /* ───────────── Header ───────────── */
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 24px;
-            position: relative;
-            z-index: 1;
-        }
-
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-weight: 700;
-            font-size: 22px;
-            letter-spacing: -0.5px;
-        }
-
-        .logo span {
-            color: var(--primary);
-        }
-
-        .logo-icon {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--primary);
-            color: var(--bg);
-            width: 34px;
-            height: 34px;
-            border-radius: 10px;
-            font-size: 18px;
-            font-weight: 800;
-        }
-
-        .status-badge {
-            background: var(--surface-light);
-            padding: 6px 16px;
-            border-radius: 100px;
-            font-size: 13px;
-            font-weight: 500;
-            color: var(--secondary);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            white-space: nowrap;
-        }
-
-        .status-badge.connected {
-            color: #4ecdc4;
-            border-color: rgba(78, 205, 196, 0.3);
-            background: rgba(78, 205, 196, 0.08);
-        }
-
-        .status-badge .dot {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: var(--secondary);
-            margin-right: 8px;
-            transition: var(--transition);
-        }
-
-        .status-badge.connected .dot {
-            background: #4ecdc4;
-            animation: pulse-dot 1.6s ease-in-out infinite;
-        }
-
-        @keyframes pulse-dot {
-            0%,
-            100% {
-                opacity: 1;
-                transform: scale(1);
-            }
-            50% {
-                opacity: 0.4;
-                transform: scale(0.7);
-            }
-        }
-
-        /* ───────────── Connection Panel ───────────── */
-        .connection-panel {
-            background: var(--surface-light);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 24px;
-            position: relative;
-            z-index: 1;
-            border: 1px solid rgba(255, 255, 255, 0.04);
-        }
-
-        .connection-panel .sub {
-            font-size: 13px;
-            color: var(--text-dim);
-            margin-bottom: 12px;
-            display: block;
-        }
-
-        .btn-group {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .btn-group .btn {
-            flex: 1;
-            min-width: 100px;
-        }
-
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 10px;
-            font-weight: 600;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all var(--transition);
-            background: var(--surface);
-            color: var(--text);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .btn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
-        }
-
-        .btn:active:not(:disabled) {
-            transform: translateY(0px);
-        }
-
-        .btn:disabled {
-            opacity: 0.4;
-            cursor: not-allowed;
-            transform: none !important;
-        }
-
-        .btn-primary {
-            background: var(--primary);
-            color: var(--bg);
-            border-color: var(--primary);
-        }
-
-        .btn-primary:hover:not(:disabled) {
-            background: #ff9a2e;
-            border-color: #ff9a2e;
-            box-shadow: 0 0 24px var(--primary-glow);
-        }
-
-        .btn-success {
-            background: #2ecc71;
-            color: var(--bg);
-            border-color: #2ecc71;
-        }
-
-        .btn-success:hover:not(:disabled) {
-            background: #3ddc84;
-            border-color: #3ddc84;
-            box-shadow: 0 0 24px rgba(46, 204, 113, 0.3);
-        }
-
-        .btn-outline {
-            background: transparent;
-            border-color: rgba(255, 255, 255, 0.1);
-        }
-
-        .btn-outline:hover:not(:disabled) {
-            background: rgba(255, 255, 255, 0.05);
-            border-color: rgba(255, 255, 255, 0.2);
-        }
-
-        .btn-icon {
-            font-size: 18px;
-            line-height: 1;
-        }
-
-        /* ───────────── Signal Box ───────────── */
-        .signal-box {
-            margin-top: 14px;
-            animation: slideDown 0.3s ease;
-        }
-
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-8px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .signal-box textarea {
-            width: 100%;
-            padding: 12px 14px;
-            border-radius: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            background: rgba(0, 0, 0, 0.3);
-            color: var(--text);
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            resize: vertical;
-            min-height: 70px;
-            max-height: 160px;
-            transition: var(--transition);
-            line-height: 1.5;
-        }
-
-        .signal-box textarea:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px var(--primary-glow);
-        }
-
-        .signal-box .signal-actions {
-            display: flex;
-            gap: 8px;
-            margin-top: 10px;
-            flex-wrap: wrap;
-        }
-
-        .signal-box .signal-actions .btn {
-            flex: 0 1 auto;
-            padding: 6px 14px;
-            font-size: 12px;
-        }
-
-        .signal-box .signal-label {
-            font-size: 12px;
-            color: var(--text-dim);
-            margin-bottom: 6px;
-            display: block;
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        /* ───────────── Game Board ───────────── */
-        .game-area {
-            position: relative;
-            z-index: 1;
-        }
-
-        .turn-indicator {
+            background-color: #1a1a1a;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
             text-align: center;
+            margin: 0;
+            padding: 20px;
+        }
+        #gameCanvas {
+            background-color: #111;
+            border: 2px solid #fff;
+            display: block;
+            margin: 20px auto;
+        }
+        .hidden { display: none; }
+        input, button {
+            padding: 10px;
             font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 16px;
-            color: var(--secondary);
-            min-height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
+            margin: 5px;
+            border-radius: 5px;
+            border: none;
         }
-
-        .turn-indicator .turn-x {
-            color: var(--x-color);
-        }
-        .turn-indicator .turn-o {
-            color: var(--o-color);
-        }
-
-        .turn-indicator .winner-text {
-            font-size: 20px;
-            font-weight: 700;
-            background: linear-gradient(135deg, var(--primary), #ff6b6b);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .board {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            aspect-ratio: 1/1;
-            max-width: 400px;
-            margin: 0 auto;
-        }
-
-        .cell {
-            background: var(--surface-light);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 52px;
-            font-weight: 700;
+        button {
+            background-color: #4CAF50;
+            color: white;
             cursor: pointer;
-            transition: all var(--transition);
-            border: 2px solid transparent;
-            aspect-ratio: 1/1;
-            user-select: none;
-            color: var(--text);
-            position: relative;
         }
-
-        .cell:hover:not(.taken):not(.game-over) {
-            background: var(--surface);
-            border-color: rgba(255, 255, 255, 0.06);
-            transform: scale(1.02);
-        }
-
-        .cell.taken {
-            cursor: default;
-        }
-
-        .cell.game-over {
-            cursor: default;
-        }
-
-        .cell.x {
-            color: var(--x-color);
-            animation: pop 0.2s ease;
-        }
-
-        .cell.o {
-            color: var(--o-color);
-            animation: pop 0.2s ease;
-        }
-
-        .cell.win-cell {
-            background: rgba(255, 137, 6, 0.15) !important;
-            border-color: var(--primary) !important;
-            box-shadow: 0 0 30px var(--primary-glow);
-            transform: scale(1.04);
-            z-index: 2;
-        }
-
-        .cell.win-cell.x {
-            color: #ff8a8a;
-        }
-        .cell.win-cell.o {
-            color: #6ee0d8;
-        }
-
-        @keyframes pop {
-            0% {
-                transform: scale(0.3);
-                opacity: 0;
-            }
-            60% {
-                transform: scale(1.15);
-            }
-            100% {
-                transform: scale(1);
-                opacity: 1;
-            }
-        }
-
-        /* ───────────── Game Controls ───────────── */
-        .game-controls {
-            display: flex;
-            justify-content: center;
-            gap: 12px;
-            margin-top: 20px;
-            flex-wrap: wrap;
-        }
-
-        .game-controls .btn {
-            min-width: 120px;
-        }
-
-        /* ───────────── Footer ───────────── */
-        .footer {
-            margin-top: 24px;
-            text-align: center;
-            font-size: 12px;
-            color: var(--text-dim);
-            border-top: 1px solid rgba(255, 255, 255, 0.04);
-            padding-top: 18px;
-            position: relative;
-            z-index: 1;
-        }
-
-        .footer a {
-            color: var(--primary);
-            text-decoration: none;
-        }
-
-        .footer a:hover {
-            text-decoration: underline;
-        }
-
-        .footer .emoji {
-            filter: grayscale(0.3);
-        }
-
-        /* ───────────── Toast ───────────── */
-        .toast {
-            position: fixed;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%) translateY(80px);
-            background: var(--surface-light);
-            color: var(--text);
-            padding: 12px 28px;
-            border-radius: 12px;
-            font-weight: 500;
-            font-size: 14px;
-            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            opacity: 0;
-            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-            pointer-events: none;
-            z-index: 999;
-            backdrop-filter: blur(12px);
-        }
-
-        .toast.show {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0);
-        }
-
-        .toast.success {
-            border-color: rgba(46, 204, 113, 0.3);
-        }
-        .toast.error {
-            border-color: rgba(255, 107, 107, 0.3);
-        }
-        .toast.info {
-            border-color: rgba(167, 169, 190, 0.2);
-        }
-
-        /* ───────────── Responsive ───────────── */
-        @media (max-width: 520px) {
-            .container {
-                padding: 20px 16px 20px;
-            }
-
-            .header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 10px;
-            }
-
-            .logo {
-                font-size: 19px;
-            }
-
-            .status-badge {
-                font-size: 12px;
-                padding: 4px 12px;
-            }
-
-            .btn-group .btn {
-                min-width: 80px;
-                font-size: 13px;
-                padding: 8px 14px;
-            }
-
-            .cell {
-                font-size: 38px;
-                border-radius: 10px;
-            }
-
-            .board {
-                gap: 8px;
-                max-width: 320px;
-            }
-
-            .turn-indicator {
-                font-size: 14px;
-            }
-
-            .signal-box textarea {
-                font-size: 11px;
-                min-height: 60px;
-            }
-        }
-
-        @media (max-width: 380px) {
-            .cell {
-                font-size: 30px;
-            }
-            .board {
-                gap: 6px;
-                max-width: 260px;
-            }
-            .btn {
-                font-size: 12px;
-                padding: 6px 12px;
-            }
-        }
-
-        /* ───────────── Scrollbar ───────────── */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: var(--surface);
-        }
-        ::-webkit-scrollbar-thumb {
-            background: var(--surface-light);
-            border-radius: 8px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--primary);
-        }
+        button:hover { background-color: #45a049; }
+        input { background: #333; color: white; }
     </style>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 </head>
 <body>
 
-    <!-- ─── Toast ─── -->
-    <div id="toast" class="toast"></div>
+    <h1>P2P WebRTC Game</h1>
 
-    <!-- ─── App ─── -->
-    <div class="container">
+    <div id="setup-screen">
+        <h3>Step 1: Host or Join</h3>
+        <button id="host-btn">Create Game (Host)</button>
+        <p id="my-id-display">Generating your ID...</p>
+        
+        <hr style="width: 50%; margin: 20px auto; border-color: #444;">
+        
+        <h3>Step 2: Join a Game</h3>
+        <input type="text" id="peer-id-input" placeholder="Paste Host ID here">
+        <button id="join-btn">Join Game</button>
+    </div>
 
-        <!-- Header -->
-        <div class="header">
-            <div class="logo">
-                <span class="logo-icon">✕</span>
-                <span>P2P <span>Tic-Tac-Toe</span></span>
-            </div>
-            <div class="status-badge" id="statusBadge">
-                <span class="dot"></span>
-                <span id="statusText">Disconnected</span>
-            </div>
-        </div>
-
-        <!-- Connection Panel -->
-        <div class="connection-panel" id="connectionPanel">
-            <span class="sub" id="connectionSub">🔗 Connect with a friend via WebRTC — no server needed.</span>
-
-            <div class="btn-group">
-                <button class="btn btn-primary" id="btnCreateGame">
-                    <span class="btn-icon">🛠</span> Create Game
-                </button>
-                <button class="btn btn-success" id="btnJoinGame">
-                    <span class="btn-icon">🔗</span> Join Game
-                </button>
-                <button class="btn btn-outline" id="btnDisconnect" disabled>
-                    <span class="btn-icon">⛔</span> Disconnect
-                </button>
-            </div>
-
-            <!-- Signal box (dynamic) -->
-            <div id="signalBox" style="display:none;"></div>
-        </div>
-
-        <!-- Game Area -->
-        <div class="game-area">
-            <div class="turn-indicator" id="turnIndicator">
-                <span>🔄 Waiting for opponent…</span>
-            </div>
-
-            <div class="board" id="board">
-                <div class="cell" data-index="0"></div>
-                <div class="cell" data-index="1"></div>
-                <div class="cell" data-index="2"></div>
-                <div class="cell" data-index="3"></div>
-                <div class="cell" data-index="4"></div>
-                <div class="cell" data-index="5"></div>
-                <div class="cell" data-index="6"></div>
-                <div class="cell" data-index="7"></div>
-                <div class="cell" data-index="8"></div>
-            </div>
-
-            <div class="game-controls">
-                <button class="btn btn-outline" id="btnReset" disabled>
-                    <span class="btn-icon">🔄</span> New Game
-                </button>
-            </div>
-        </div>
-
-        <div class="footer">
-            ✦ Peer-to-peer via WebRTC &nbsp;·&nbsp; No database, no server &nbsp;·&nbsp;
-            <a href="#" id="footerInfo">ⓘ How it works</a>
-        </div>
+    <div id="game-screen" class="hidden">
+        <h3 id="connection-status">Connecting...</h3>
+        <canvas id="gameCanvas" width="600" height="400"></canvas>
+        <p>Use <b>Arrow Keys</b> or <b>W/A/S/D</b> to move your square.</p>
     </div>
 
     <script>
-        // ════════════════════════════════════════════════════════════════
-        //  P2P TIC-TAC-TOE  —  WebRTC + Manual Signaling
-        // ════════════════════════════════════════════════════════════════
+        const setupScreen = document.getElementById('setup-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const hostBtn = document.getElementById('host-btn');
+        const joinBtn = document.getElementById('join-btn');
+        const peerIdInput = document.getElementById('peer-id-input');
+        const myIdDisplay = document.getElementById('my-id-display');
+        const connectionStatus = document.getElementById('connection-status');
+        
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
 
-        (() => {
-            'use strict';
+        let peer;
+        let conn;
+        let isHost = false;
 
-            // ─── DOM refs ──────────────────────────────────────────────
-            const $ = (sel) => document.querySelector(sel);
-            const $$ = (sel) => document.querySelectorAll(sel);
+        // Game State
+        const myPos = { x: 100, y: 100, size: 30, color: '#ff5722', speed: 4 };
+        const peerPos = { x: 400, y: 200, size: 30, color: '#2196F3' };
+        const keys = {};
 
-            const boardEl = $('#board');
-            const cells = $$('.cell');
-            const turnIndicator = $('#turnIndicator');
-            const statusBadge = $('#statusBadge');
-            const statusText = $('#statusText');
-            const connectionSub = $('#connectionSub');
-            const signalBox = $('#signalBox');
+        // Initialize PeerJS
+        function initPeer() {
+            peer = new Peer(); // Uses PeerJS free public cloud server for signaling
 
-            const btnCreate = $('#btnCreateGame');
-            const btnJoin = $('#btnJoinGame');
-            const btnDisconnect = $('#btnDisconnect');
-            const btnReset = $('#btnReset');
-            const toast = $('#toast');
-
-            // ─── Game state ────────────────────────────────────────────
-            const state = {
-                board: Array(9).fill(null),
-                currentPlayer: 'X', // 'X' or 'O'
-                gameOver: false,
-                winner: null, // 'X', 'O', 'draw', or null
-                mySymbol: null, // 'X' or 'O' — assigned when connected
-                turn: 'X', // whose turn it is
-                connected: false,
-                peerConnection: null,
-                dataChannel: null,
-                isCreator: false, // true = created game, false = joined
-                waitingForOpponent: false,
-                // Signaling state
-                localDescription: null,
-                remoteDescription: null,
-                inSignalFlow: false,
-            };
-
-            // ─── Constants ─────────────────────────────────────────────
-            const WIN_COMBOS = [
-                [0, 1, 2],
-                [3, 4, 5],
-                [6, 7, 8],
-                [0, 3, 6],
-                [1, 4, 7],
-                [2, 5, 8],
-                [0, 4, 8],
-                [2, 4, 6]
-            ];
-
-            const STUN_SERVERS = {
-                iceServers: [
-                    { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'stun:stun1.l.google.com:19302' },
-                ]
-            };
-
-            // ─── Toast ──────────────────────────────────────────────────
-            let toastTimer = null;
-
-            function showToast(msg, type = 'info', duration = 3000) {
-                if (toastTimer) {
-                    clearTimeout(toastTimer);
-                    toast.classList.remove('show', 'success', 'error', 'info');
-                }
-                toast.textContent = msg;
-                toast.className = `toast ${type}`;
-                // force reflow
-                void toast.offsetWidth;
-                toast.classList.add('show');
-                toastTimer = setTimeout(() => {
-                    toast.classList.remove('show');
-                    toastTimer = null;
-                }, duration);
-            }
-
-            // ─── UI updates ────────────────────────────────────────────
-
-            function setStatus(text, connected = false) {
-                statusText.textContent = text;
-                if (connected) {
-                    statusBadge.classList.add('connected');
-                } else {
-                    statusBadge.classList.remove('connected');
-                }
-            }
-
-            function updateTurnIndicator() {
-                const el = turnIndicator;
-                if (state.gameOver) {
-                    if (state.winner === 'draw') {
-                        el.innerHTML = '🤝 <span style="color:var(--secondary);">Draw!</span>';
-                    } else if (state.winner) {
-                        const symbol = state.winner;
-                        const color = symbol === 'X' ? 'var(--x-color)' : 'var(--o-color)';
-                        el.innerHTML =
-                            `🏆 <span style="color:${color};font-weight:700;">${symbol}</span> <span style="color:var(--secondary);">wins!</span>`;
-                    } else {
-                        el.innerHTML = '⏳ Game over';
-                    }
-                    return;
-                }
-
-                if (!state.connected) {
-                    el.innerHTML = '🔄 Waiting for opponent…';
-                    return;
-                }
-
-                const isMyTurn = state.turn === state.mySymbol;
-                const symbol = state.turn;
-                const color = symbol === 'X' ? 'var(--x-color)' : 'var(--o-color)';
-                const label = symbol === 'X' ? '✕' : '◯';
-                const turnText = isMyTurn ? 'Your turn' : "Opponent's turn";
-                el.innerHTML =
-                    `<span style="color:${color};font-weight:700;">${label}</span> <span style="color:var(--secondary);">·</span> ${turnText}`;
-            }
-
-            function renderBoard() {
-                cells.forEach((cell, i) => {
-                    const val = state.board[i];
-                    cell.textContent = val || '';
-                    cell.className = 'cell';
-                    if (val) {
-                        cell.classList.add('taken', val === 'X' ? 'x' : 'o');
-                    }
-                    if (state.gameOver) {
-                        cell.classList.add('game-over');
-                    }
-                });
-
-                // Highlight winning cells
-                if (state.winner && state.winner !== 'draw') {
-                    const combo = WIN_COMBOS.find(c =>
-                        c.every(idx => state.board[idx] === state.winner)
-                    );
-                    if (combo) {
-                        combo.forEach(idx => {
-                            cells[idx].classList.add('win-cell');
-                        });
-                    }
-                }
-
-                updateTurnIndicator();
-            }
-
-            function updateButtons() {
-                const conn = state.connected;
-                const inGame = conn && !state.gameOver;
-
-                btnCreate.disabled = conn || state.inSignalFlow;
-                btnJoin.disabled = conn || state.inSignalFlow;
-                btnDisconnect.disabled = !conn;
-                btnReset.disabled = !conn;
-
-                // Update connection panel sub
-                if (conn) {
-                    connectionSub.textContent = `✅ Connected as ${state.mySymbol}  ·  ${state.isCreator ? 'Host' : 'Guest'}`;
-                } else {
-                    connectionSub.textContent = '🔗 Connect with a friend via WebRTC — no server needed.';
-                }
-            }
-
-            // ─── Game logic ────────────────────────────────────────────
-
-            function checkWinner(board) {
-                for (const combo of WIN_COMBOS) {
-                    const [a, b, c] = combo;
-                    if (board[a] && board[a] === board[b] && board[a] === board[c]) {
-                        return board[a];
-                    }
-                }
-                if (board.every(v => v !== null)) return 'draw';
-                return null;
-            }
-
-            function makeMove(index) {
-                if (state.gameOver) return false;
-                if (!state.connected) {
-                    showToast('Not connected to opponent.', 'error');
-                    return false;
-                }
-                if (state.turn !== state.mySymbol) {
-                    showToast('Not your turn!', 'error');
-                    return false;
-                }
-                if (state.board[index] !== null) {
-                    showToast('Cell already taken!', 'error');
-                    return false;
-                }
-
-                // Apply move locally
-                state.board[index] = state.mySymbol;
-                state.turn = state.turn === 'X' ? 'O' : 'X';
-                const winner = checkWinner(state.board);
-                if (winner) {
-                    state.gameOver = true;
-                    state.winner = winner;
-                }
-                renderBoard();
-                updateButtons();
-
-                // Send move to peer
-                if (state.dataChannel && state.dataChannel.readyState === 'open') {
-                    state.dataChannel.send(JSON.stringify({
-                        type: 'move',
-                        index,
-                        board: state.board,
-                        turn: state.turn,
-                        gameOver: state.gameOver,
-                        winner: state.winner,
-                    }));
-                } else {
-                    showToast('Connection lost!', 'error');
-                    disconnect();
-                }
-
-                return true;
-            }
-
-            function resetGame() {
-                state.board = Array(9).fill(null);
-                state.gameOver = false;
-                state.winner = null;
-                state.turn = 'X';
-                renderBoard();
-                updateButtons();
-                // Tell peer
-                if (state.dataChannel && state.dataChannel.readyState === 'open') {
-                    state.dataChannel.send(JSON.stringify({
-                        type: 'reset',
-                    }));
-                }
-                showToast('Game reset!', 'info');
-            }
-
-            // ─── WebRTC ────────────────────────────────────────────────
-
-            function createPeerConnection() {
-                const pc = new RTCPeerConnection(STUN_SERVERS);
-                pc.onconnectionstatechange = () => {
-                    const cs = pc.connectionState;
-                    if (cs === 'connected') {
-                        setStatus('Connected', true);
-                        state.connected = true;
-                        updateButtons();
-                        renderBoard();
-                        showToast('🎉 Connected! Game starting…', 'success');
-                    } else if (cs === 'disconnected' || cs === 'failed' || cs === 'closed') {
-                        if (state.connected) {
-                            showToast('Connection lost.', 'error');
-                            disconnect();
-                        }
-                    }
-                };
-
-                pc.oniceconnectionstatechange = () => {
-                    const ics = pc.iceConnectionState;
-                    if (ics === 'disconnected' || ics === 'failed') {
-                        if (state.connected) {
-                            showToast('ICE connection lost.', 'error');
-                            disconnect();
-                        }
-                    }
-                };
-
-                // Data channel
-                const dc = pc.createDataChannel('game-channel', {
-                    ordered: true,
-                });
-                dc.onopen = () => {
-                    state.dataChannel = dc;
-                    state.connected = true;
-                    setStatus('Connected', true);
-                    updateButtons();
-                    renderBoard();
-                    // Assign symbols
-                    if (state.isCreator) {
-                        state.mySymbol = 'X';
-                        state.turn = 'X';
-                    } else {
-                        state.mySymbol = 'O';
-                        state.turn = 'X';
-                    }
-                    showToast(`You are ${state.mySymbol}`, 'success');
-                    renderBoard();
-                    updateButtons();
-                };
-                dc.onclose = () => {
-                    if (state.connected) {
-                        showToast('Data channel closed.', 'error');
-                        disconnect();
-                    }
-                };
-                dc.onmessage = (ev) => {
-                    try {
-                        const data = JSON.parse(ev.data);
-                        handlePeerMessage(data);
-                    } catch (e) {
-                        console.warn('Invalid message:', e);
-                    }
-                };
-
-                pc.ondatachannel = (ev) => {
-                    const channel = ev.channel;
-                    channel.onopen = () => {
-                        state.dataChannel = channel;
-                        state.connected = true;
-                        setStatus('Connected', true);
-                        updateButtons();
-                        renderBoard();
-                        // Assign symbols
-                        if (state.isCreator) {
-                            state.mySymbol = 'X';
-                            state.turn = 'X';
-                        } else {
-                            state.mySymbol = 'O';
-                            state.turn = 'X';
-                        }
-                        showToast(`You are ${state.mySymbol}`, 'success');
-                        renderBoard();
-                        updateButtons();
-                    };
-                    channel.onclose = () => {
-                        if (state.connected) {
-                            showToast('Data channel closed.', 'error');
-                            disconnect();
-                        }
-                    };
-                    channel.onmessage = (ev) => {
-                        try {
-                            const data = JSON.parse(ev.data);
-                            handlePeerMessage(data);
-                        } catch (e) {
-                            console.warn('Invalid message:', e);
-                        }
-                    };
-                };
-
-                return pc;
-            }
-
-            function handlePeerMessage(data) {
-                if (data.type === 'move') {
-                    // Apply remote move
-                    if (state.gameOver) {
-                        // If remote sends a move after game over, ignore
-                        return;
-                    }
-                    // Check if it's our turn (we should be the opponent)
-                    if (state.turn === state.mySymbol) {
-                        // It's our turn, but remote sent a move — maybe out of sync
-                        showToast('Out of sync — resetting.', 'error');
-                        resetGame();
-                        return;
-                    }
-                    // Apply the move
-                    if (data.index !== undefined && data.board) {
-                        state.board = data.board;
-                        state.turn = data.turn;
-                        state.gameOver = data.gameOver || false;
-                        state.winner = data.winner || null;
-                        renderBoard();
-                        updateButtons();
-                        if (state.gameOver) {
-                            if (state.winner === 'draw') {
-                                showToast('🤝 Draw!', 'info');
-                            } else if (state.winner) {
-                                const who = state.winner === state.mySymbol ? 'You' : 'Opponent';
-                                showToast(`🏆 ${who} wins!`, 'success');
-                            }
-                        }
-                    }
-                } else if (data.type === 'reset') {
-                    state.board = Array(9).fill(null);
-                    state.gameOver = false;
-                    state.winner = null;
-                    state.turn = 'X';
-                    renderBoard();
-                    updateButtons();
-                    showToast('Opponent reset the game.', 'info');
-                } else if (data.type === 'ping') {
-                    // simple keep-alive
-                    if (state.dataChannel && state.dataChannel.readyState === 'open') {
-                        state.dataChannel.send(JSON.stringify({ type: 'pong' }));
-                    }
-                }
-            }
-
-            // ─── Signaling ─────────────────────────────────────────────
-
-            function showSignalBox(html) {
-                signalBox.style.display = 'block';
-                signalBox.innerHTML = html;
-                // Auto-select text in textarea
-                const ta = signalBox.querySelector('textarea');
-                if (ta) {
-                    ta.focus();
-                    ta.select();
-                }
-            }
-
-            function hideSignalBox() {
-                signalBox.style.display = 'none';
-                signalBox.innerHTML = '';
-            }
-
-            function buildSignalOffer() {
-                // Creator: create offer
-                state.inSignalFlow = true;
-                updateButtons();
-                showToast('Creating connection…', 'info');
-
-                const pc = createPeerConnection();
-                state.peerConnection = pc;
-
-                pc.onicecandidate = (ev) => {
-                    if (ev.candidate === null) {
-                        // All candidates gathered — show the offer
-                        const desc = pc.localDescription;
-                        if (desc) {
-                            const sdp = JSON.stringify(desc);
-                            showSignalBox(`
-                                <span class="signal-label">📋 Copy this offer and send it to your friend:</span>
-                                <textarea readonly>${sdp}</textarea>
-                                <div class="signal-actions">
-                                    <button class="btn btn-primary" id="signalCopyOffer">📋 Copy</button>
-                                    <button class="btn btn-outline" id="signalCancel">Cancel</button>
-                                </div>
-                            `);
-                            document.getElementById('signalCopyOffer')?.addEventListener('click', () => {
-                                const ta2 = signalBox.querySelector('textarea');
-                                if (ta2) {
-                                    navigator.clipboard?.writeText(ta2.value).then(() => {
-                                        showToast('Copied!', 'success');
-                                    }).catch(() => {
-                                        ta2.select();
-                                        document.execCommand('copy');
-                                        showToast('Copied!', 'success');
-                                    });
-                                }
-                            });
-                            document.getElementById('signalCancel')?.addEventListener('click', () => {
-                                disconnect();
-                                hideSignalBox();
-                                showToast('Cancelled.', 'info');
-                            });
-                            state.inSignalFlow = false;
-                            updateButtons();
-                        }
-                    }
-                };
-
-                pc.createOffer()
-                    .then(offer => pc.setLocalDescription(offer))
-                    .catch(err => {
-                        console.error('createOffer error:', err);
-                        showToast('Failed to create offer.', 'error');
-                        disconnect();
-                        state.inSignalFlow = false;
-                        updateButtons();
-                    });
-            }
-
-            function buildSignalAnswer(offerSdp) {
-                // Joiner: receive offer, create answer
-                state.inSignalFlow = true;
-                updateButtons();
-                showToast('Joining game…', 'info');
-
-                let offerDesc;
-                try {
-                    offerDesc = JSON.parse(offerSdp);
-                } catch (e) {
-                    showToast('Invalid offer format.', 'error');
-                    state.inSignalFlow = false;
-                    updateButtons();
-                    return;
-                }
-
-                const pc = createPeerConnection();
-                state.peerConnection = pc;
-
-                pc.onicecandidate = (ev) => {
-                    if (ev.candidate === null) {
-                        const desc = pc.localDescription;
-                        if (desc) {
-                            const sdp = JSON.stringify(desc);
-                            showSignalBox(`
-                                <span class="signal-label">📋 Copy this answer and send it back to the host:</span>
-                                <textarea readonly>${sdp}</textarea>
-                                <div class="signal-actions">
-                                    <button class="btn btn-primary" id="signalCopyAnswer">📋 Copy</button>
-                                    <button class="btn btn-outline" id="signalCancel">Cancel</button>
-                                </div>
-                            `);
-                            document.getElementById('signalCopyAnswer')?.addEventListener('click', () => {
-                                const ta2 = signalBox.querySelector('textarea');
-                                if (ta2) {
-                                    navigator.clipboard?.writeText(ta2.value).then(() => {
-                                        showToast('Copied!', 'success');
-                                    }).catch(() => {
-                                        ta2.select();
-                                        document.execCommand('copy');
-                                        showToast('Copied!', 'success');
-                                    });
-                                }
-                            });
-                            document.getElementById('signalCancel')?.addEventListener('click', () => {
-                                disconnect();
-                                hideSignalBox();
-                                showToast('Cancelled.', 'info');
-                            });
-                            state.inSignalFlow = false;
-                            updateButtons();
-                        }
-                    }
-                };
-
-                pc.setRemoteDescription(offerDesc)
-                    .then(() => pc.createAnswer())
-                    .then(answer => pc.setLocalDescription(answer))
-                    .catch(err => {
-                        console.error('Answer error:', err);
-                        showToast('Failed to create answer.', 'error');
-                        disconnect();
-                        state.inSignalFlow = false;
-                        updateButtons();
-                    });
-            }
-
-            function completeConnection(answerSdp) {
-                // Creator: receive answer from joiner
-                let answerDesc;
-                try {
-                    answerDesc = JSON.parse(answerSdp);
-                } catch (e) {
-                    showToast('Invalid answer format.', 'error');
-                    return;
-                }
-
-                const pc = state.peerConnection;
-                if (!pc) {
-                    showToast('No active connection.', 'error');
-                    return;
-                }
-
-                pc.setRemoteDescription(answerDesc)
-                    .then(() => {
-                        hideSignalBox();
-                        showToast('Connection established!', 'success');
-                        // The onconnectionstatechange / datachannel open will handle the rest
-                    })
-                    .catch(err => {
-                        console.error('setRemoteDescription error:', err);
-                        showToast('Failed to complete connection.', 'error');
-                        disconnect();
-                    });
-            }
-
-            // ─── Disconnect ────────────────────────────────────────────
-
-            function disconnect() {
-                if (state.peerConnection) {
-                    try { state.peerConnection.close(); } catch (_) {}
-                    state.peerConnection = null;
-                }
-                state.dataChannel = null;
-                state.connected = false;
-                state.mySymbol = null;
-                state.isCreator = false;
-                state.inSignalFlow = false;
-                state.board = Array(9).fill(null);
-                state.gameOver = false;
-                state.winner = null;
-                state.turn = 'X';
-                hideSignalBox();
-                setStatus('Disconnected', false);
-                renderBoard();
-                updateButtons();
-                showToast('Disconnected.', 'info');
-            }
-
-            // ─── Event listeners ──────────────────────────────────────
-
-            // Create Game
-            btnCreate.addEventListener('click', () => {
-                if (state.connected) return;
-                if (state.inSignalFlow) return;
-                state.isCreator = true;
-                buildSignalOffer();
+            peer.on('open', (id) => {
+                myIdDisplay.innerText = `Your Host ID: ${id}`;
             });
 
-            // Join Game
-            btnJoin.addEventListener('click', () => {
-                if (state.connected) return;
-                if (state.inSignalFlow) return;
-                // Show input for offer
-                showSignalBox(`
-                    <span class="signal-label">📥 Paste the offer from the host:</span>
-                    <textarea id="offerInput" placeholder="Paste the offer SDP here…"></textarea>
-                    <div class="signal-actions">
-                        <button class="btn btn-success" id="signalSubmitOffer">🔗 Connect</button>
-                        <button class="btn btn-outline" id="signalCancelJoin">Cancel</button>
-                    </div>
-                `);
-                document.getElementById('signalSubmitOffer')?.addEventListener('click', () => {
-                    const ta = document.getElementById('offerInput');
-                    if (!ta || !ta.value.trim()) {
-                        showToast('Please paste an offer.', 'error');
-                        return;
-                    }
-                    state.isCreator = false;
-                    buildSignalAnswer(ta.value.trim());
-                });
-                document.getElementById('signalCancelJoin')?.addEventListener('click', () => {
-                    hideSignalBox();
-                    showToast('Cancelled.', 'info');
-                });
+            // If someone connects to us (We are Host)
+            peer.on('connection', (connection) => {
+                conn = connection;
+                isHost = true;
+                setupConnectionHandlers();
+                startGameUI();
+            });
+        }
+
+        initPeer();
+
+        // Host Button Click
+        hostBtn.addEventListener('click', () => {
+            if (!peer.id) {
+                alert("Peer ID not ready yet. Please wait a second.");
+            } else {
+                myIdDisplay.innerText = `Waiting for connection on ID: ${peer.id}`;
+            }
+        });
+
+        // Join Button Click (We are Client)
+        joinBtn.addEventListener('click', () => {
+            const remoteId = peerIdInput.value.trim();
+            if (!remoteId) {
+                alert("Please enter a valid Host ID.");
+                return;
+            }
+            isHost = false;
+            conn = peer.connect(remoteId);
+            setupConnectionHandlers();
+            startGameUI();
+        });
+
+        function setupConnectionHandlers() {
+            conn.on('open', () => {
+                connectionStatus.innerText = "Connected! Game active.";
             });
 
-            // Disconnect
-            btnDisconnect.addEventListener('click', disconnect);
-
-            // Reset
-            btnReset.addEventListener('click', resetGame);
-
-            // Board clicks
-            boardEl.addEventListener('click', (e) => {
-                const cell = e.target.closest('.cell');
-                if (!cell) return;
-                const idx = parseInt(cell.dataset.index, 10);
-                if (isNaN(idx)) return;
-                makeMove(idx);
+            conn.on('data', (data) => {
+                // Receive position data from the other player
+                peerPos.x = data.x;
+                peerPos.y = data.y;
             });
 
-            // Footer info
-            document.getElementById('footerInfo')?.addEventListener('click', (e) => {
-                e.preventDefault();
-                showToast(
-                    '📡 WebRTC P2P · Manual signaling: copy-paste SDP to connect. ' +
-                    'No server, no database. Host creates offer, guest joins with it.',
-                    'info', 5000
-                );
+            conn.on('close', () => {
+                alert("The other player disconnected.");
+                location.reload();
             });
+        }
 
-            // ─── Keyboard shortcut: Ctrl+Shift+R to reset ────────────
-            document.addEventListener('keydown', (e) => {
-                if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'r' || e.key === 'R')) {
-                    e.preventDefault();
-                    if (state.connected) resetGame();
-                }
-            });
+        function startGameUI() {
+            setupScreen.classList.add('hidden');
+            gameScreen.classList.remove('hidden');
+            requestAnimationFrame(gameLoop);
+        }
 
-            // ─── Init ──────────────────────────────────────────────────
+        // Handle Keyboard Inputs
+        window.addEventListener('keydown', (e) => { keys[e.key] = true; });
+        window.addEventListener('keyup', (e) => { keys[e.key] = false; });
 
-            renderBoard();
-            updateButtons();
-            setStatus('Disconnected', false);
-            showToast('🎮 Create or join a game to start!', 'info', 3000);
+        function update() {
+            // Movement logic
+            if (keys['ArrowUp'] || keys['w'] || keys['W']) myPos.y -= myPos.speed;
+            if (keys['ArrowDown'] || keys['s'] || keys['S']) myPos.y += myPos.speed;
+            if (keys['ArrowLeft'] || keys['a'] || keys['A']) myPos.x -= myPos.speed;
+            if (keys['ArrowRight'] || keys['d'] || keys['D']) myPos.x += myPos.speed;
 
-            // ─── Ping keepalive ────────────────────────────────────────
-            setInterval(() => {
-                if (state.connected && state.dataChannel && state.dataChannel.readyState === 'open') {
-                    state.dataChannel.send(JSON.stringify({ type: 'ping' }));
-                }
-            }, 15000);
+            // Boundaries
+            myPos.x = Math.max(0, Math.min(canvas.width - myPos.size, myPos.x));
+            myPos.y = Math.max(0, Math.min(canvas.height - myPos.size, myPos.y));
 
-        })();
+            // Send position to peer if connected
+            if (conn && conn.open) {
+                conn.send({ x: myPos.x, y: myPos.y });
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw My Square
+            ctx.fillStyle = myPos.color;
+            ctx.fillRect(myPos.x, myPos.y, myPos.size, myPos.size);
+
+            // Draw Peer's Square
+            ctx.fillStyle = peerPos.color;
+            ctx.fillRect(peerPos.x, peerPos.y, peerPos.size, peerPos.size);
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
     </script>
-
 </body>
 </html>
