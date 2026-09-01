@@ -126,9 +126,11 @@
 
         let peer;
         let conn;
-        let isHost = false;
+        
+        // Unique prefix prevents collisions on public PeerJS server
+        const APP_PREFIX = "p2p_square_game_";
 
-        // Auto-suggest a random 4-digit code for convenience
+        // Auto-suggest a random 4-digit code
         hostCodeInput.value = Math.floor(1000 + Math.random() * 9000);
 
         // Game Entities
@@ -143,32 +145,31 @@
                 errorMsg.innerText = "Code must be exactly 4 digits.";
                 return;
             }
-            errorMsg.innerText = "Hosting... waiting for player.";
+            errorMsg.style.color = "#ffcc00";
+            errorMsg.innerText = "Hosting... registering code...";
 
             if (peer) peer.destroy();
 
-            // Initialize Peer with custom 4-digit ID
-            peer = new Peer(code);
+            const fullId = APP_PREFIX + code;
+            peer = new Peer(fullId);
 
             peer.on('open', (id) => {
                 errorMsg.style.color = "#4CAF50";
-                errorMsg.innerText = `Hosting with code: ${id}. Tell your friend to join!`;
+                errorMsg.innerText = `Ready! Give code "${code}" to your friend.`;
             });
 
             peer.on('error', (err) => {
                 errorMsg.style.color = "#ff5252";
                 if (err.type === 'unavailable-id') {
-                    errorMsg.innerText = "That 4-digit code is already taken globally. Try another.";
+                    errorMsg.innerText = "That 4-digit code is currently in use. Try another.";
                 } else {
-                    errorMsg.innerText = `Error: ${err.type}`;
+                    errorMsg.innerText = `PeerJS Error: ${err.type}`;
                 }
             });
 
             peer.on('connection', (connection) => {
                 conn = connection;
-                isHost = true;
                 setupConnectionHandlers();
-                startGameUI();
             });
         });
 
@@ -179,7 +180,7 @@
                 errorMsg.innerText = "Please enter a valid 4-digit code.";
                 return;
             }
-            errorMsg.style.color = "#ff5252";
+            errorMsg.style.color = "#ffcc00";
             errorMsg.innerText = "Connecting to host...";
 
             if (peer) peer.destroy();
@@ -187,12 +188,14 @@
             peer = new Peer(); // Client creates a temporary random ID to connect outbound
 
             peer.on('open', () => {
-                conn = peer.connect(code);
+                const fullId = APP_PREFIX + code;
+                conn = peer.connect(fullId);
                 setupConnectionHandlers();
             });
 
             peer.on('error', (err) => {
-                errorMsg.innerText = "Could not connect. Check the 4-digit code.";
+                errorMsg.style.color = "#ff5252";
+                errorMsg.innerText = `Could not connect: Check code or try again.`;
             });
         });
 
@@ -210,6 +213,10 @@
             conn.on('close', () => {
                 alert("Connection lost with the other player.");
                 location.reload();
+            });
+
+            conn.on('error', (err) => {
+                connectionStatus.innerText = "Data channel error.";
             });
         }
 
