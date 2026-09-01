@@ -1,427 +1,1330 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>NetplayJS P2P 多人测试</title>
+    <title>P2P Tic-Tac-Toe</title>
     <style>
-        * { box-sizing: border-box; font-family: system-ui, sans-serif; }
+        /* ───────────── Reset & Base ───────────── */
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --bg: #0f0e17;
+            --surface: #1a1932;
+            --surface-light: #2a2848;
+            --primary: #ff8906;
+            --primary-glow: rgba(255, 137, 6, 0.3);
+            --secondary: #a7a9be;
+            --text: #fffffe;
+            --text-dim: #8a8aa0;
+            --x-color: #ff6b6b;
+            --o-color: #4ecdc4;
+            --radius: 16px;
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            --transition: 0.25s ease;
+        }
+
         body {
-            max-width: 700px;
-            margin: 2rem auto;
-            padding: 0 1rem;
-            background: #f1f5f9;
-        }
-        .card {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-        }
-        h1 { margin: 0 0 0.25rem; font-size: 1.6rem; color: #0f172a; }
-        .subtitle { color: #475569; margin: 0 0 1rem; font-size: 0.95rem; }
-        .status-bar {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
             display: flex;
-            flex-wrap: wrap;
-            gap: 0.75rem 1.5rem;
-            background: #f8fafc;
-            padding: 0.6rem 1rem;
-            border-radius: 8px;
-            font-size: 0.9rem;
-            border: 1px solid #e2e8f0;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            background-image: radial-gradient(ellipse at 30% 20%, #1a1a3e 0%, #0f0e17 70%);
         }
-        .status-bar span {
+
+        /* ───────────── Container ───────────── */
+        .container {
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: 32px 28px 28px;
+            max-width: 580px;
+            width: 100%;
+            box-shadow: var(--shadow);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(2px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .container::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 50% 0%, var(--primary-glow), transparent 70%);
+            opacity: 0.06;
+            pointer-events: none;
+        }
+
+        /* ───────────── Header ───────────── */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .logo {
             display: flex;
             align-items: center;
-            gap: 0.3rem;
+            gap: 10px;
+            font-weight: 700;
+            font-size: 22px;
+            letter-spacing: -0.5px;
         }
-        .status-dot {
-            display: inline-block;
-            width: 10px; height: 10px;
-            border-radius: 50%;
-            margin-right: 4px;
-        }
-        .status-dot.online { background: #22c55e; }
-        .status-dot.offline { background: #94a3b8; }
-        .status-dot.connecting { background: #eab308; animation: pulse 1s infinite; }
-        @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
 
-        .peer-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.4rem;
-            margin: 0.5rem 0 0;
+        .logo span {
+            color: var(--primary);
         }
-        .peer-tag {
-            background: #dbeafe;
-            color: #1e40af;
-            padding: 0.2rem 0.7rem;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-family: monospace;
+
+        .logo-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--primary);
+            color: var(--bg);
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: 800;
         }
-        .messages {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 0.75rem;
-            height: 200px;
-            overflow-y: auto;
-            margin: 0.5rem 0;
-            font-size: 0.95rem;
-        }
-        .messages .msg {
-            padding: 0.2rem 0;
-            border-bottom: 1px solid #f1f5f9;
-        }
-        .messages .system {
-            color: #64748b;
-            font-style: italic;
-            font-size: 0.85rem;
-            padding: 0.15rem 0;
-        }
-        .row {
-            display: flex;
-            gap: 0.5rem;
-        }
-        .row input {
-            flex: 1;
-            padding: 0.5rem 0.75rem;
-            border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            font-size: 1rem;
-        }
-        .row input:disabled {
-            background: #f1f5f9;
-            cursor: not-allowed;
-        }
-        button {
-            padding: 0.5rem 1.5rem;
-            background: #2563eb;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: background 0.15s;
+
+        .status-badge {
+            background: var(--surface-light);
+            padding: 6px 16px;
+            border-radius: 100px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--secondary);
+            border: 1px solid rgba(255, 255, 255, 0.06);
             white-space: nowrap;
         }
-        button:hover:not(:disabled) { background: #1d4ed8; }
-        button:disabled { opacity: 0.5; cursor: not-allowed; }
-        .config-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-            align-items: center;
-            margin-bottom: 0.75rem;
+
+        .status-badge.connected {
+            color: #4ecdc4;
+            border-color: rgba(78, 205, 196, 0.3);
+            background: rgba(78, 205, 196, 0.08);
         }
-        .config-row label { font-weight: 600; font-size: 0.9rem; color: #334155; }
-        .config-row input[type="text"] {
-            padding: 0.3rem 0.6rem;
-            border: 1px solid #cbd5e1;
-            border-radius: 6px;
-            font-size: 0.9rem;
+
+        .status-badge .dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--secondary);
+            margin-right: 8px;
+            transition: var(--transition);
+        }
+
+        .status-badge.connected .dot {
+            background: #4ecdc4;
+            animation: pulse-dot 1.6s ease-in-out infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.4;
+                transform: scale(0.7);
+            }
+        }
+
+        /* ───────────── Connection Panel ───────────── */
+        .connection-panel {
+            background: var(--surface-light);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+            position: relative;
+            z-index: 1;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .connection-panel .sub {
+            font-size: 13px;
+            color: var(--text-dim);
+            margin-bottom: 12px;
+            display: block;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn-group .btn {
             flex: 1;
+            min-width: 100px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all var(--transition);
+            background: var(--surface);
+            color: var(--text);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn:active:not(:disabled) {
+            transform: translateY(0px);
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: var(--bg);
+            border-color: var(--primary);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #ff9a2e;
+            border-color: #ff9a2e;
+            box-shadow: 0 0 24px var(--primary-glow);
+        }
+
+        .btn-success {
+            background: #2ecc71;
+            color: var(--bg);
+            border-color: #2ecc71;
+        }
+
+        .btn-success:hover:not(:disabled) {
+            background: #3ddc84;
+            border-color: #3ddc84;
+            box-shadow: 0 0 24px rgba(46, 204, 113, 0.3);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-outline:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-icon {
+            font-size: 18px;
+            line-height: 1;
+        }
+
+        /* ───────────── Signal Box ───────────── */
+        .signal-box {
+            margin-top: 14px;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .signal-box textarea {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(0, 0, 0, 0.3);
+            color: var(--text);
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            resize: vertical;
+            min-height: 70px;
+            max-height: 160px;
+            transition: var(--transition);
+            line-height: 1.5;
+        }
+
+        .signal-box textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-glow);
+        }
+
+        .signal-box .signal-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .signal-box .signal-actions .btn {
+            flex: 0 1 auto;
+            padding: 6px 14px;
+            font-size: 12px;
+        }
+
+        .signal-box .signal-label {
+            font-size: 12px;
+            color: var(--text-dim);
+            margin-bottom: 6px;
+            display: block;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* ───────────── Game Board ───────────── */
+        .game-area {
+            position: relative;
+            z-index: 1;
+        }
+
+        .turn-indicator {
+            text-align: center;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--secondary);
+            min-height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .turn-indicator .turn-x {
+            color: var(--x-color);
+        }
+        .turn-indicator .turn-o {
+            color: var(--o-color);
+        }
+
+        .turn-indicator .winner-text {
+            font-size: 20px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), #ff6b6b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            aspect-ratio: 1/1;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .cell {
+            background: var(--surface-light);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 52px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all var(--transition);
+            border: 2px solid transparent;
+            aspect-ratio: 1/1;
+            user-select: none;
+            color: var(--text);
+            position: relative;
+        }
+
+        .cell:hover:not(.taken):not(.game-over) {
+            background: var(--surface);
+            border-color: rgba(255, 255, 255, 0.06);
+            transform: scale(1.02);
+        }
+
+        .cell.taken {
+            cursor: default;
+        }
+
+        .cell.game-over {
+            cursor: default;
+        }
+
+        .cell.x {
+            color: var(--x-color);
+            animation: pop 0.2s ease;
+        }
+
+        .cell.o {
+            color: var(--o-color);
+            animation: pop 0.2s ease;
+        }
+
+        .cell.win-cell {
+            background: rgba(255, 137, 6, 0.15) !important;
+            border-color: var(--primary) !important;
+            box-shadow: 0 0 30px var(--primary-glow);
+            transform: scale(1.04);
+            z-index: 2;
+        }
+
+        .cell.win-cell.x {
+            color: #ff8a8a;
+        }
+        .cell.win-cell.o {
+            color: #6ee0d8;
+        }
+
+        @keyframes pop {
+            0% {
+                transform: scale(0.3);
+                opacity: 0;
+            }
+            60% {
+                transform: scale(1.15);
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        /* ───────────── Game Controls ───────────── */
+        .game-controls {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .game-controls .btn {
             min-width: 120px;
         }
-        .counter-box {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            margin: 0.5rem 0;
-        }
-        .counter-box span {
-            font-size: 1.5rem;
-            font-weight: bold;
-            min-width: 3rem;
+
+        /* ───────────── Footer ───────────── */
+        .footer {
+            margin-top: 24px;
             text-align: center;
+            font-size: 12px;
+            color: var(--text-dim);
+            border-top: 1px solid rgba(255, 255, 255, 0.04);
+            padding-top: 18px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .footer a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        .footer .emoji {
+            filter: grayscale(0.3);
+        }
+
+        /* ───────────── Toast ───────────── */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(80px);
+            background: var(--surface-light);
+            color: var(--text);
+            padding: 12px 28px;
+            border-radius: 12px;
+            font-weight: 500;
+            font-size: 14px;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            pointer-events: none;
+            z-index: 999;
+            backdrop-filter: blur(12px);
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .toast.success {
+            border-color: rgba(46, 204, 113, 0.3);
+        }
+        .toast.error {
+            border-color: rgba(255, 107, 107, 0.3);
+        }
+        .toast.info {
+            border-color: rgba(167, 169, 190, 0.2);
+        }
+
+        /* ───────────── Responsive ───────────── */
+        @media (max-width: 520px) {
+            .container {
+                padding: 20px 16px 20px;
+            }
+
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+
+            .logo {
+                font-size: 19px;
+            }
+
+            .status-badge {
+                font-size: 12px;
+                padding: 4px 12px;
+            }
+
+            .btn-group .btn {
+                min-width: 80px;
+                font-size: 13px;
+                padding: 8px 14px;
+            }
+
+            .cell {
+                font-size: 38px;
+                border-radius: 10px;
+            }
+
+            .board {
+                gap: 8px;
+                max-width: 320px;
+            }
+
+            .turn-indicator {
+                font-size: 14px;
+            }
+
+            .signal-box textarea {
+                font-size: 11px;
+                min-height: 60px;
+            }
+        }
+
+        @media (max-width: 380px) {
+            .cell {
+                font-size: 30px;
+            }
+            .board {
+                gap: 6px;
+                max-width: 260px;
+            }
+            .btn {
+                font-size: 12px;
+                padding: 6px 12px;
+            }
+        }
+
+        /* ───────────── Scrollbar ───────────── */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--surface);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--surface-light);
+            border-radius: 8px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary);
         }
     </style>
 </head>
 <body>
 
-    <h1>🎮 NetplayJS P2P 多人测试</h1>
-    <p class="subtitle">使用 NetplayJS 的回滚网络 · 无需服务器</p>
+    <!-- ─── Toast ─── -->
+    <div id="toast" class="toast"></div>
 
-    <div class="card">
-        <div class="config-row">
-            <label for="roomInput">房间名</label>
-            <input type="text" id="roomInput" value="netplay-test-room" />
-            <button id="connectBtn">🚀 加入房间</button>
-        </div>
-        <div class="status-bar">
-            <span>
-                <span class="status-dot offline" id="statusDot"></span>
-                <span id="statusText">未连接</span>
-            </span>
-            <span>🆔 我的ID: <strong id="myIdDisplay">—</strong></span>
-            <span>👥 玩家数: <strong id="playerCount">0</strong></span>
-        </div>
-        <div>
-            <div style="font-weight:600; font-size:0.9rem; color:#334155; margin-top:0.5rem;">房间内的玩家</div>
-            <div class="peer-list" id="playerList">
-                <span style="color:#94a3b8; font-size:0.85rem;">暂无</span>
+    <!-- ─── App ─── -->
+    <div class="container">
+
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">
+                <span class="logo-icon">✕</span>
+                <span>P2P <span>Tic-Tac-Toe</span></span>
+            </div>
+            <div class="status-badge" id="statusBadge">
+                <span class="dot"></span>
+                <span id="statusText">Disconnected</span>
             </div>
         </div>
+
+        <!-- Connection Panel -->
+        <div class="connection-panel" id="connectionPanel">
+            <span class="sub" id="connectionSub">🔗 Connect with a friend via WebRTC — no server needed.</span>
+
+            <div class="btn-group">
+                <button class="btn btn-primary" id="btnCreateGame">
+                    <span class="btn-icon">🛠</span> Create Game
+                </button>
+                <button class="btn btn-success" id="btnJoinGame">
+                    <span class="btn-icon">🔗</span> Join Game
+                </button>
+                <button class="btn btn-outline" id="btnDisconnect" disabled>
+                    <span class="btn-icon">⛔</span> Disconnect
+                </button>
+            </div>
+
+            <!-- Signal box (dynamic) -->
+            <div id="signalBox" style="display:none;"></div>
+        </div>
+
+        <!-- Game Area -->
+        <div class="game-area">
+            <div class="turn-indicator" id="turnIndicator">
+                <span>🔄 Waiting for opponent…</span>
+            </div>
+
+            <div class="board" id="board">
+                <div class="cell" data-index="0"></div>
+                <div class="cell" data-index="1"></div>
+                <div class="cell" data-index="2"></div>
+                <div class="cell" data-index="3"></div>
+                <div class="cell" data-index="4"></div>
+                <div class="cell" data-index="5"></div>
+                <div class="cell" data-index="6"></div>
+                <div class="cell" data-index="7"></div>
+                <div class="cell" data-index="8"></div>
+            </div>
+
+            <div class="game-controls">
+                <button class="btn btn-outline" id="btnReset" disabled>
+                    <span class="btn-icon">🔄</span> New Game
+                </button>
+            </div>
+        </div>
+
+        <div class="footer">
+            ✦ Peer-to-peer via WebRTC &nbsp;·&nbsp; No database, no server &nbsp;·&nbsp;
+            <a href="#" id="footerInfo">ⓘ How it works</a>
+        </div>
     </div>
 
-    <div class="card">
-        <h3>📊 共享计数器 (点击增加)</h3>
-        <div class="counter-box">
-            <button id="decrementBtn" disabled>−</button>
-            <span id="counterDisplay">0</span>
-            <button id="incrementBtn" disabled>+</button>
-        </div>
-        <div style="font-size:0.85rem; color:#64748b;">所有玩家看到的数值将自动同步</div>
-    </div>
+    <script>
+        // ════════════════════════════════════════════════════════════════
+        //  P2P TIC-TAC-TOE  —  WebRTC + Manual Signaling
+        // ════════════════════════════════════════════════════════════════
 
-    <div class="card">
-        <h3>💬 聊天</h3>
-        <div class="messages" id="messageContainer">
-            <div class="system">💡 点击「加入房间」开始</div>
-        </div>
-        <div class="row">
-            <input type="text" id="messageInput" placeholder="输入消息..." disabled />
-            <button id="sendBtn" disabled>发送</button>
-        </div>
-    </div>
+        (() => {
+            'use strict';
 
-    <!-- NetplayJS 使用 ESM 方式加载 -->
-    <script type="importmap">
-        {
-            "imports": {
-                "netplayjs": "https://esm.sh/netplayjs@0.18.0"
+            // ─── DOM refs ──────────────────────────────────────────────
+            const $ = (sel) => document.querySelector(sel);
+            const $$ = (sel) => document.querySelectorAll(sel);
+
+            const boardEl = $('#board');
+            const cells = $$('.cell');
+            const turnIndicator = $('#turnIndicator');
+            const statusBadge = $('#statusBadge');
+            const statusText = $('#statusText');
+            const connectionSub = $('#connectionSub');
+            const signalBox = $('#signalBox');
+
+            const btnCreate = $('#btnCreateGame');
+            const btnJoin = $('#btnJoinGame');
+            const btnDisconnect = $('#btnDisconnect');
+            const btnReset = $('#btnReset');
+            const toast = $('#toast');
+
+            // ─── Game state ────────────────────────────────────────────
+            const state = {
+                board: Array(9).fill(null),
+                currentPlayer: 'X', // 'X' or 'O'
+                gameOver: false,
+                winner: null, // 'X', 'O', 'draw', or null
+                mySymbol: null, // 'X' or 'O' — assigned when connected
+                turn: 'X', // whose turn it is
+                connected: false,
+                peerConnection: null,
+                dataChannel: null,
+                isCreator: false, // true = created game, false = joined
+                waitingForOpponent: false,
+                // Signaling state
+                localDescription: null,
+                remoteDescription: null,
+                inSignalFlow: false,
+            };
+
+            // ─── Constants ─────────────────────────────────────────────
+            const WIN_COMBOS = [
+                [0, 1, 2],
+                [3, 4, 5],
+                [6, 7, 8],
+                [0, 3, 6],
+                [1, 4, 7],
+                [2, 5, 8],
+                [0, 4, 8],
+                [2, 4, 6]
+            ];
+
+            const STUN_SERVERS = {
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' },
+                ]
+            };
+
+            // ─── Toast ──────────────────────────────────────────────────
+            let toastTimer = null;
+
+            function showToast(msg, type = 'info', duration = 3000) {
+                if (toastTimer) {
+                    clearTimeout(toastTimer);
+                    toast.classList.remove('show', 'success', 'error', 'info');
+                }
+                toast.textContent = msg;
+                toast.className = `toast ${type}`;
+                // force reflow
+                void toast.offsetWidth;
+                toast.classList.add('show');
+                toastTimer = setTimeout(() => {
+                    toast.classList.remove('show');
+                    toastTimer = null;
+                }, duration);
             }
-        }
+
+            // ─── UI updates ────────────────────────────────────────────
+
+            function setStatus(text, connected = false) {
+                statusText.textContent = text;
+                if (connected) {
+                    statusBadge.classList.add('connected');
+                } else {
+                    statusBadge.classList.remove('connected');
+                }
+            }
+
+            function updateTurnIndicator() {
+                const el = turnIndicator;
+                if (state.gameOver) {
+                    if (state.winner === 'draw') {
+                        el.innerHTML = '🤝 <span style="color:var(--secondary);">Draw!</span>';
+                    } else if (state.winner) {
+                        const symbol = state.winner;
+                        const color = symbol === 'X' ? 'var(--x-color)' : 'var(--o-color)';
+                        el.innerHTML =
+                            `🏆 <span style="color:${color};font-weight:700;">${symbol}</span> <span style="color:var(--secondary);">wins!</span>`;
+                    } else {
+                        el.innerHTML = '⏳ Game over';
+                    }
+                    return;
+                }
+
+                if (!state.connected) {
+                    el.innerHTML = '🔄 Waiting for opponent…';
+                    return;
+                }
+
+                const isMyTurn = state.turn === state.mySymbol;
+                const symbol = state.turn;
+                const color = symbol === 'X' ? 'var(--x-color)' : 'var(--o-color)';
+                const label = symbol === 'X' ? '✕' : '◯';
+                const turnText = isMyTurn ? 'Your turn' : "Opponent's turn";
+                el.innerHTML =
+                    `<span style="color:${color};font-weight:700;">${label}</span> <span style="color:var(--secondary);">·</span> ${turnText}`;
+            }
+
+            function renderBoard() {
+                cells.forEach((cell, i) => {
+                    const val = state.board[i];
+                    cell.textContent = val || '';
+                    cell.className = 'cell';
+                    if (val) {
+                        cell.classList.add('taken', val === 'X' ? 'x' : 'o');
+                    }
+                    if (state.gameOver) {
+                        cell.classList.add('game-over');
+                    }
+                });
+
+                // Highlight winning cells
+                if (state.winner && state.winner !== 'draw') {
+                    const combo = WIN_COMBOS.find(c =>
+                        c.every(idx => state.board[idx] === state.winner)
+                    );
+                    if (combo) {
+                        combo.forEach(idx => {
+                            cells[idx].classList.add('win-cell');
+                        });
+                    }
+                }
+
+                updateTurnIndicator();
+            }
+
+            function updateButtons() {
+                const conn = state.connected;
+                const inGame = conn && !state.gameOver;
+
+                btnCreate.disabled = conn || state.inSignalFlow;
+                btnJoin.disabled = conn || state.inSignalFlow;
+                btnDisconnect.disabled = !conn;
+                btnReset.disabled = !conn;
+
+                // Update connection panel sub
+                if (conn) {
+                    connectionSub.textContent = `✅ Connected as ${state.mySymbol}  ·  ${state.isCreator ? 'Host' : 'Guest'}`;
+                } else {
+                    connectionSub.textContent = '🔗 Connect with a friend via WebRTC — no server needed.';
+                }
+            }
+
+            // ─── Game logic ────────────────────────────────────────────
+
+            function checkWinner(board) {
+                for (const combo of WIN_COMBOS) {
+                    const [a, b, c] = combo;
+                    if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+                        return board[a];
+                    }
+                }
+                if (board.every(v => v !== null)) return 'draw';
+                return null;
+            }
+
+            function makeMove(index) {
+                if (state.gameOver) return false;
+                if (!state.connected) {
+                    showToast('Not connected to opponent.', 'error');
+                    return false;
+                }
+                if (state.turn !== state.mySymbol) {
+                    showToast('Not your turn!', 'error');
+                    return false;
+                }
+                if (state.board[index] !== null) {
+                    showToast('Cell already taken!', 'error');
+                    return false;
+                }
+
+                // Apply move locally
+                state.board[index] = state.mySymbol;
+                state.turn = state.turn === 'X' ? 'O' : 'X';
+                const winner = checkWinner(state.board);
+                if (winner) {
+                    state.gameOver = true;
+                    state.winner = winner;
+                }
+                renderBoard();
+                updateButtons();
+
+                // Send move to peer
+                if (state.dataChannel && state.dataChannel.readyState === 'open') {
+                    state.dataChannel.send(JSON.stringify({
+                        type: 'move',
+                        index,
+                        board: state.board,
+                        turn: state.turn,
+                        gameOver: state.gameOver,
+                        winner: state.winner,
+                    }));
+                } else {
+                    showToast('Connection lost!', 'error');
+                    disconnect();
+                }
+
+                return true;
+            }
+
+            function resetGame() {
+                state.board = Array(9).fill(null);
+                state.gameOver = false;
+                state.winner = null;
+                state.turn = 'X';
+                renderBoard();
+                updateButtons();
+                // Tell peer
+                if (state.dataChannel && state.dataChannel.readyState === 'open') {
+                    state.dataChannel.send(JSON.stringify({
+                        type: 'reset',
+                    }));
+                }
+                showToast('Game reset!', 'info');
+            }
+
+            // ─── WebRTC ────────────────────────────────────────────────
+
+            function createPeerConnection() {
+                const pc = new RTCPeerConnection(STUN_SERVERS);
+                pc.onconnectionstatechange = () => {
+                    const cs = pc.connectionState;
+                    if (cs === 'connected') {
+                        setStatus('Connected', true);
+                        state.connected = true;
+                        updateButtons();
+                        renderBoard();
+                        showToast('🎉 Connected! Game starting…', 'success');
+                    } else if (cs === 'disconnected' || cs === 'failed' || cs === 'closed') {
+                        if (state.connected) {
+                            showToast('Connection lost.', 'error');
+                            disconnect();
+                        }
+                    }
+                };
+
+                pc.oniceconnectionstatechange = () => {
+                    const ics = pc.iceConnectionState;
+                    if (ics === 'disconnected' || ics === 'failed') {
+                        if (state.connected) {
+                            showToast('ICE connection lost.', 'error');
+                            disconnect();
+                        }
+                    }
+                };
+
+                // Data channel
+                const dc = pc.createDataChannel('game-channel', {
+                    ordered: true,
+                });
+                dc.onopen = () => {
+                    state.dataChannel = dc;
+                    state.connected = true;
+                    setStatus('Connected', true);
+                    updateButtons();
+                    renderBoard();
+                    // Assign symbols
+                    if (state.isCreator) {
+                        state.mySymbol = 'X';
+                        state.turn = 'X';
+                    } else {
+                        state.mySymbol = 'O';
+                        state.turn = 'X';
+                    }
+                    showToast(`You are ${state.mySymbol}`, 'success');
+                    renderBoard();
+                    updateButtons();
+                };
+                dc.onclose = () => {
+                    if (state.connected) {
+                        showToast('Data channel closed.', 'error');
+                        disconnect();
+                    }
+                };
+                dc.onmessage = (ev) => {
+                    try {
+                        const data = JSON.parse(ev.data);
+                        handlePeerMessage(data);
+                    } catch (e) {
+                        console.warn('Invalid message:', e);
+                    }
+                };
+
+                pc.ondatachannel = (ev) => {
+                    const channel = ev.channel;
+                    channel.onopen = () => {
+                        state.dataChannel = channel;
+                        state.connected = true;
+                        setStatus('Connected', true);
+                        updateButtons();
+                        renderBoard();
+                        // Assign symbols
+                        if (state.isCreator) {
+                            state.mySymbol = 'X';
+                            state.turn = 'X';
+                        } else {
+                            state.mySymbol = 'O';
+                            state.turn = 'X';
+                        }
+                        showToast(`You are ${state.mySymbol}`, 'success');
+                        renderBoard();
+                        updateButtons();
+                    };
+                    channel.onclose = () => {
+                        if (state.connected) {
+                            showToast('Data channel closed.', 'error');
+                            disconnect();
+                        }
+                    };
+                    channel.onmessage = (ev) => {
+                        try {
+                            const data = JSON.parse(ev.data);
+                            handlePeerMessage(data);
+                        } catch (e) {
+                            console.warn('Invalid message:', e);
+                        }
+                    };
+                };
+
+                return pc;
+            }
+
+            function handlePeerMessage(data) {
+                if (data.type === 'move') {
+                    // Apply remote move
+                    if (state.gameOver) {
+                        // If remote sends a move after game over, ignore
+                        return;
+                    }
+                    // Check if it's our turn (we should be the opponent)
+                    if (state.turn === state.mySymbol) {
+                        // It's our turn, but remote sent a move — maybe out of sync
+                        showToast('Out of sync — resetting.', 'error');
+                        resetGame();
+                        return;
+                    }
+                    // Apply the move
+                    if (data.index !== undefined && data.board) {
+                        state.board = data.board;
+                        state.turn = data.turn;
+                        state.gameOver = data.gameOver || false;
+                        state.winner = data.winner || null;
+                        renderBoard();
+                        updateButtons();
+                        if (state.gameOver) {
+                            if (state.winner === 'draw') {
+                                showToast('🤝 Draw!', 'info');
+                            } else if (state.winner) {
+                                const who = state.winner === state.mySymbol ? 'You' : 'Opponent';
+                                showToast(`🏆 ${who} wins!`, 'success');
+                            }
+                        }
+                    }
+                } else if (data.type === 'reset') {
+                    state.board = Array(9).fill(null);
+                    state.gameOver = false;
+                    state.winner = null;
+                    state.turn = 'X';
+                    renderBoard();
+                    updateButtons();
+                    showToast('Opponent reset the game.', 'info');
+                } else if (data.type === 'ping') {
+                    // simple keep-alive
+                    if (state.dataChannel && state.dataChannel.readyState === 'open') {
+                        state.dataChannel.send(JSON.stringify({ type: 'pong' }));
+                    }
+                }
+            }
+
+            // ─── Signaling ─────────────────────────────────────────────
+
+            function showSignalBox(html) {
+                signalBox.style.display = 'block';
+                signalBox.innerHTML = html;
+                // Auto-select text in textarea
+                const ta = signalBox.querySelector('textarea');
+                if (ta) {
+                    ta.focus();
+                    ta.select();
+                }
+            }
+
+            function hideSignalBox() {
+                signalBox.style.display = 'none';
+                signalBox.innerHTML = '';
+            }
+
+            function buildSignalOffer() {
+                // Creator: create offer
+                state.inSignalFlow = true;
+                updateButtons();
+                showToast('Creating connection…', 'info');
+
+                const pc = createPeerConnection();
+                state.peerConnection = pc;
+
+                pc.onicecandidate = (ev) => {
+                    if (ev.candidate === null) {
+                        // All candidates gathered — show the offer
+                        const desc = pc.localDescription;
+                        if (desc) {
+                            const sdp = JSON.stringify(desc);
+                            showSignalBox(`
+                                <span class="signal-label">📋 Copy this offer and send it to your friend:</span>
+                                <textarea readonly>${sdp}</textarea>
+                                <div class="signal-actions">
+                                    <button class="btn btn-primary" id="signalCopyOffer">📋 Copy</button>
+                                    <button class="btn btn-outline" id="signalCancel">Cancel</button>
+                                </div>
+                            `);
+                            document.getElementById('signalCopyOffer')?.addEventListener('click', () => {
+                                const ta2 = signalBox.querySelector('textarea');
+                                if (ta2) {
+                                    navigator.clipboard?.writeText(ta2.value).then(() => {
+                                        showToast('Copied!', 'success');
+                                    }).catch(() => {
+                                        ta2.select();
+                                        document.execCommand('copy');
+                                        showToast('Copied!', 'success');
+                                    });
+                                }
+                            });
+                            document.getElementById('signalCancel')?.addEventListener('click', () => {
+                                disconnect();
+                                hideSignalBox();
+                                showToast('Cancelled.', 'info');
+                            });
+                            state.inSignalFlow = false;
+                            updateButtons();
+                        }
+                    }
+                };
+
+                pc.createOffer()
+                    .then(offer => pc.setLocalDescription(offer))
+                    .catch(err => {
+                        console.error('createOffer error:', err);
+                        showToast('Failed to create offer.', 'error');
+                        disconnect();
+                        state.inSignalFlow = false;
+                        updateButtons();
+                    });
+            }
+
+            function buildSignalAnswer(offerSdp) {
+                // Joiner: receive offer, create answer
+                state.inSignalFlow = true;
+                updateButtons();
+                showToast('Joining game…', 'info');
+
+                let offerDesc;
+                try {
+                    offerDesc = JSON.parse(offerSdp);
+                } catch (e) {
+                    showToast('Invalid offer format.', 'error');
+                    state.inSignalFlow = false;
+                    updateButtons();
+                    return;
+                }
+
+                const pc = createPeerConnection();
+                state.peerConnection = pc;
+
+                pc.onicecandidate = (ev) => {
+                    if (ev.candidate === null) {
+                        const desc = pc.localDescription;
+                        if (desc) {
+                            const sdp = JSON.stringify(desc);
+                            showSignalBox(`
+                                <span class="signal-label">📋 Copy this answer and send it back to the host:</span>
+                                <textarea readonly>${sdp}</textarea>
+                                <div class="signal-actions">
+                                    <button class="btn btn-primary" id="signalCopyAnswer">📋 Copy</button>
+                                    <button class="btn btn-outline" id="signalCancel">Cancel</button>
+                                </div>
+                            `);
+                            document.getElementById('signalCopyAnswer')?.addEventListener('click', () => {
+                                const ta2 = signalBox.querySelector('textarea');
+                                if (ta2) {
+                                    navigator.clipboard?.writeText(ta2.value).then(() => {
+                                        showToast('Copied!', 'success');
+                                    }).catch(() => {
+                                        ta2.select();
+                                        document.execCommand('copy');
+                                        showToast('Copied!', 'success');
+                                    });
+                                }
+                            });
+                            document.getElementById('signalCancel')?.addEventListener('click', () => {
+                                disconnect();
+                                hideSignalBox();
+                                showToast('Cancelled.', 'info');
+                            });
+                            state.inSignalFlow = false;
+                            updateButtons();
+                        }
+                    }
+                };
+
+                pc.setRemoteDescription(offerDesc)
+                    .then(() => pc.createAnswer())
+                    .then(answer => pc.setLocalDescription(answer))
+                    .catch(err => {
+                        console.error('Answer error:', err);
+                        showToast('Failed to create answer.', 'error');
+                        disconnect();
+                        state.inSignalFlow = false;
+                        updateButtons();
+                    });
+            }
+
+            function completeConnection(answerSdp) {
+                // Creator: receive answer from joiner
+                let answerDesc;
+                try {
+                    answerDesc = JSON.parse(answerSdp);
+                } catch (e) {
+                    showToast('Invalid answer format.', 'error');
+                    return;
+                }
+
+                const pc = state.peerConnection;
+                if (!pc) {
+                    showToast('No active connection.', 'error');
+                    return;
+                }
+
+                pc.setRemoteDescription(answerDesc)
+                    .then(() => {
+                        hideSignalBox();
+                        showToast('Connection established!', 'success');
+                        // The onconnectionstatechange / datachannel open will handle the rest
+                    })
+                    .catch(err => {
+                        console.error('setRemoteDescription error:', err);
+                        showToast('Failed to complete connection.', 'error');
+                        disconnect();
+                    });
+            }
+
+            // ─── Disconnect ────────────────────────────────────────────
+
+            function disconnect() {
+                if (state.peerConnection) {
+                    try { state.peerConnection.close(); } catch (_) {}
+                    state.peerConnection = null;
+                }
+                state.dataChannel = null;
+                state.connected = false;
+                state.mySymbol = null;
+                state.isCreator = false;
+                state.inSignalFlow = false;
+                state.board = Array(9).fill(null);
+                state.gameOver = false;
+                state.winner = null;
+                state.turn = 'X';
+                hideSignalBox();
+                setStatus('Disconnected', false);
+                renderBoard();
+                updateButtons();
+                showToast('Disconnected.', 'info');
+            }
+
+            // ─── Event listeners ──────────────────────────────────────
+
+            // Create Game
+            btnCreate.addEventListener('click', () => {
+                if (state.connected) return;
+                if (state.inSignalFlow) return;
+                state.isCreator = true;
+                buildSignalOffer();
+            });
+
+            // Join Game
+            btnJoin.addEventListener('click', () => {
+                if (state.connected) return;
+                if (state.inSignalFlow) return;
+                // Show input for offer
+                showSignalBox(`
+                    <span class="signal-label">📥 Paste the offer from the host:</span>
+                    <textarea id="offerInput" placeholder="Paste the offer SDP here…"></textarea>
+                    <div class="signal-actions">
+                        <button class="btn btn-success" id="signalSubmitOffer">🔗 Connect</button>
+                        <button class="btn btn-outline" id="signalCancelJoin">Cancel</button>
+                    </div>
+                `);
+                document.getElementById('signalSubmitOffer')?.addEventListener('click', () => {
+                    const ta = document.getElementById('offerInput');
+                    if (!ta || !ta.value.trim()) {
+                        showToast('Please paste an offer.', 'error');
+                        return;
+                    }
+                    state.isCreator = false;
+                    buildSignalAnswer(ta.value.trim());
+                });
+                document.getElementById('signalCancelJoin')?.addEventListener('click', () => {
+                    hideSignalBox();
+                    showToast('Cancelled.', 'info');
+                });
+            });
+
+            // Disconnect
+            btnDisconnect.addEventListener('click', disconnect);
+
+            // Reset
+            btnReset.addEventListener('click', resetGame);
+
+            // Board clicks
+            boardEl.addEventListener('click', (e) => {
+                const cell = e.target.closest('.cell');
+                if (!cell) return;
+                const idx = parseInt(cell.dataset.index, 10);
+                if (isNaN(idx)) return;
+                makeMove(idx);
+            });
+
+            // Footer info
+            document.getElementById('footerInfo')?.addEventListener('click', (e) => {
+                e.preventDefault();
+                showToast(
+                    '📡 WebRTC P2P · Manual signaling: copy-paste SDP to connect. ' +
+                    'No server, no database. Host creates offer, guest joins with it.',
+                    'info', 5000
+                );
+            });
+
+            // ─── Keyboard shortcut: Ctrl+Shift+R to reset ────────────
+            document.addEventListener('keydown', (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'r' || e.key === 'R')) {
+                    e.preventDefault();
+                    if (state.connected) resetGame();
+                }
+            });
+
+            // ─── Init ──────────────────────────────────────────────────
+
+            renderBoard();
+            updateButtons();
+            setStatus('Disconnected', false);
+            showToast('🎮 Create or join a game to start!', 'info', 3000);
+
+            // ─── Ping keepalive ────────────────────────────────────────
+            setInterval(() => {
+                if (state.connected && state.dataChannel && state.dataChannel.readyState === 'open') {
+                    state.dataChannel.send(JSON.stringify({ type: 'ping' }));
+                }
+            }, 15000);
+
+        })();
     </script>
 
-    <script type="module">
-        // -------- 导入 NetplayJS --------
-        import { Netplay, Host, Client } from 'netplayjs';
-
-        // -------- DOM 引用 --------
-        const roomInput = document.getElementById('roomInput');
-        const connectBtn = document.getElementById('connectBtn');
-        const statusDot = document.getElementById('statusDot');
-        const statusText = document.getElementById('statusText');
-        const myIdDisplay = document.getElementById('myIdDisplay');
-        const playerCount = document.getElementById('playerCount');
-        const playerList = document.getElementById('playerList');
-        const messageContainer = document.getElementById('messageContainer');
-        const messageInput = document.getElementById('messageInput');
-        const sendBtn = document.getElementById('sendBtn');
-        const counterDisplay = document.getElementById('counterDisplay');
-        const incrementBtn = document.getElementById('incrementBtn');
-        const decrementBtn = document.getElementById('decrementBtn');
-
-        // -------- 状态 --------
-        let netplay = null;
-        let myPlayerId = null;
-        let playerIds = new Set();
-
-        // -------- 辅助函数 --------
-        function setStatus(state, text) {
-            statusDot.className = 'status-dot ' + state;
-            statusText.textContent = text;
-        }
-
-        function addSystemMessage(text) {
-            const div = document.createElement('div');
-            div.className = 'system';
-            div.textContent = '⚙️ ' + text;
-            messageContainer.appendChild(div);
-            messageContainer.scrollTop = messageContainer.scrollHeight;
-        }
-
-        function addChatMessage(playerId, text, isMe = false) {
-            const div = document.createElement('div');
-            div.className = 'msg';
-            const prefix = isMe ? '🧑 我' : `👤 ${playerId.slice(0, 6)}`;
-            div.textContent = `[${prefix}] ${text}`;
-            messageContainer.appendChild(div);
-            messageContainer.scrollTop = messageContainer.scrollHeight;
-        }
-
-        function updatePlayerList() {
-            const all = Array.from(playerIds).filter(id => id !== myPlayerId);
-            playerCount.textContent = all.length + 1; // 包括自己
-            if (all.length === 0) {
-                playerList.innerHTML = '<span style="color:#94a3b8; font-size:0.85rem;">只有你自己</span>';
-            } else {
-                playerList.innerHTML = all.map(id =>
-                    `<span class="peer-tag">${id}</span>`
-                ).join('');
-            }
-        }
-
-        // -------- 核心：加入房间 --------
-        async function joinRoom() {
-            const roomName = roomInput.value.trim() || 'default-room';
-
-            if (netplay) {
-                // 简单的清理，NetplayJS 没有显式销毁方法，我们重置引用
-                netplay = null;
-                myPlayerId = null;
-                playerIds.clear();
-                updatePlayerList();
-                addSystemMessage('已离开旧房间');
-            }
-
-            setStatus('connecting', '正在连接...');
-            connectBtn.disabled = true;
-            messageInput.disabled = true;
-            sendBtn.disabled = true;
-            incrementBtn.disabled = true;
-            decrementBtn.disabled = true;
-
-            try {
-                // 创建 Netplay 实例
-                // NetplayJS 使用信令服务器 (默认公共服务器: wss://signal.netplayjs.com)
-                // 也支持自定义信令服务器，但这里用默认
-                netplay = new Netplay({
-                    // 信令服务器地址（可以使用免费公共服务器）
-                    signalServer: 'wss://signal.netplayjs.com',
-                    // 房间名
-                    room: roomName,
-                    // 玩家信息（可选）
-                    playerData: { name: 'Player-' + Math.random().toString(36).slice(2, 6) }
-                });
-
-                // 监听连接事件
-                netplay.on('connect', (playerId) => {
-                    myPlayerId = playerId;
-                    myIdDisplay.textContent = myPlayerId;
-                    setStatus('online', '已连接');
-                    addSystemMessage(`✅ 已加入房间，你的ID: ${myPlayerId}`);
-                    connectBtn.disabled = false;
-                    messageInput.disabled = false;
-                    sendBtn.disabled = false;
-                    incrementBtn.disabled = false;
-                    decrementBtn.disabled = false;
-
-                    // 把自己加入列表
-                    playerIds.add(myPlayerId);
-                    updatePlayerList();
-                });
-
-                netplay.on('disconnect', () => {
-                    setStatus('offline', '已断开');
-                    addSystemMessage('⚠️ 与房间断开连接');
-                    connectBtn.disabled = false;
-                    messageInput.disabled = true;
-                    sendBtn.disabled = true;
-                    incrementBtn.disabled = true;
-                    decrementBtn.disabled = true;
-                    playerIds.clear();
-                    updatePlayerList();
-                });
-
-                netplay.on('playerJoin', (playerId) => {
-                    if (playerId !== myPlayerId) {
-                        playerIds.add(playerId);
-                        updatePlayerList();
-                        addSystemMessage(`👋 ${playerId} 加入了房间`);
-                    }
-                });
-
-                netplay.on('playerLeave', (playerId) => {
-                    if (playerIds.has(playerId)) {
-                        playerIds.delete(playerId);
-                        updatePlayerList();
-                        addSystemMessage(`👋 ${playerId} 离开了房间`);
-                    }
-                });
-
-                // -------- 同步状态 (计数器) --------
-                // 定义共享状态：一个计数器
-                const initialState = { counter: 0 };
-                // 创建主机（如果是第一个加入的自动成为主机，或使用 netplay.host）
-                // NetplayJS 会自动处理主机选举，我们只需使用 netplay.state
-                const state = netplay.state(initialState);
-
-                // 监听状态变化
-                state.onChange((newState) => {
-                    counterDisplay.textContent = newState.counter;
-                });
-
-                // 修改计数器的方法
-                const changeCounter = (delta) => {
-                    if (!netplay) return;
-                    // 通过 netplay.send 发送操作，框架会自动同步
-                    // 但更推荐使用 netplay.action 来定义操作
-                };
-
-                // 使用 action 定义操作（更规范）
-                const incrementAction = netplay.action('increment', (state) => {
-                    state.counter += 1;
-                });
-
-                const decrementAction = netplay.action('decrement', (state) => {
-                    state.counter -= 1;
-                });
-
-                // 绑定按钮
-                incrementBtn.onclick = () => {
-                    if (incrementAction) incrementAction();
-                };
-                decrementBtn.onclick = () => {
-                    if (decrementAction) decrementAction();
-                };
-
-                // -------- 聊天功能 (使用 netplay.send 发送自定义消息) --------
-                // 监听消息
-                netplay.on('message', (data, senderId) => {
-                    if (senderId === myPlayerId) return;
-                    if (data.type === 'chat') {
-                        addChatMessage(senderId, data.text, false);
-                    }
-                });
-
-                // 发送消息函数
-                window.sendChatMessage = (text) => {
-                    if (!netplay) return;
-                    netplay.send({ type: 'chat', text });
-                    addChatMessage(myPlayerId, text, true);
-                };
-
-                // 绑定发送按钮
-                sendBtn.onclick = () => {
-                    const text = messageInput.value.trim();
-                    if (text) {
-                        window.sendChatMessage(text);
-                        messageInput.value = '';
-                    }
-                };
-                messageInput.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter') sendBtn.click();
-                });
-
-                // 连接（Netplay 构造函数会自动连接，但我们需要等待 connect 事件）
-                // 上面已经设置了监听，现在调用 netplay.connect() 显式连接
-                netplay.connect();
-
-            } catch (err) {
-                console.error('NetplayJS 连接失败:', err);
-                setStatus('offline', '连接失败');
-                connectBtn.disabled = false;
-                addSystemMessage(`❌ 连接失败: ${err.message}`);
-            }
-        }
-
-        // -------- 事件绑定 --------
-        connectBtn.addEventListener('click', joinRoom);
-        roomInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') joinRoom();
-        });
-
-        addSystemMessage('🚀 点击「加入房间」开始');
-        addSystemMessage('💡 打开多个标签页（或不同设备）测试 P2P 同步');
-        console.log('🎮 NetplayJS 测试页面已加载');
-
-        // 注意: NetplayJS 的公共信令服务器可能有时不稳定，如果连接失败，可尝试更换信号服务器。
-        // 也可以自建信令服务器，见 https://github.com/NetplayJS/netplayjs
-    </script>
 </body>
 </html>
